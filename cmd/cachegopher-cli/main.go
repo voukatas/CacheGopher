@@ -17,7 +17,7 @@ func main() {
 
 	defer newClient.Close()
 
-	resp, err := newClient.Set("testKey", "testValue")
+	resp, err := newClient.Set("testKey", "testValue\\n1111")
 	if err != nil {
 
 		fmt.Printf("failed to SET key, error: %s", err)

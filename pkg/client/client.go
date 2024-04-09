@@ -4,14 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 )
 
 type Client struct {
-	conn   net.Conn
-	reader *bufio.Reader
-	lock   sync.RWMutex
+	conn    net.Conn
+	scanner *bufio.Scanner
+	lock    sync.RWMutex
 }
 
 func NewClient(address string) (*Client, error) {
@@ -22,9 +21,9 @@ func NewClient(address string) (*Client, error) {
 	}
 
 	return &Client{
-		conn:   conn,
-		reader: bufio.NewReader(conn),
-		lock:   sync.RWMutex{},
+		conn:    conn,
+		scanner: bufio.NewScanner(conn),
+		lock:    sync.RWMutex{},
 	}, nil
 }
 
@@ -40,15 +39,15 @@ func sendCommand(c *Client, cmd string) (string, error) {
 		return "", err
 	}
 
-	resp, err := c.reader.ReadString('\n')
-	if err != nil {
+	if c.scanner.Scan() {
+		return c.scanner.Text(), nil
+	}
+
+	if err := c.scanner.Err(); err != nil {
 		return "", err
 	}
 
-	resp = strings.TrimSpace(resp)
-
-	// fmt.Printf("Response: %s\n", resp)
-	return resp, nil
+	return "", fmt.Errorf("no response")
 }
 
 func (c *Client) Set(k, v string) (string, error) {

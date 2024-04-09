@@ -8,6 +8,11 @@ The purpose is to build a Distributed In-Memory Key-Value Store which will focus
 - Partitioning Strategy: Consistent Hashing which is a common approach
 - Partition Tolerance and Consistency: Read Replicas. The approach is to replicate data from the primary node to one or more secondary nodes. This way the system should be able to handle read-heavy workloads. Also the replication might be done in an async way. Further investigation on how to promote a replica node to a primary role in case the original primary node fails.
 
+# Current Functionality
+
+- TCP is used to send/receive data
+- Keys can't have whitespaces, Values of the keys can be up to 64KB
+
 # How to build/run
 
 Clone the repo and then run the main.go

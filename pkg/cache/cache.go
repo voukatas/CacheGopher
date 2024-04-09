@@ -165,7 +165,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 			return
 
 		default:
-			fmt.Fprintf(conn, "ERROR: Unknown command\n")
+			fmt.Fprintf(conn, "ERROR: Unknown command: %s\n", cmd[0])
 
 		}
 	}
