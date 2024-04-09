@@ -81,9 +81,17 @@ func (c *Cache) Keys() []string {
 
 func HandleConnection(conn net.Conn, c *Cache) {
 	defer conn.Close()
-	scanner := bufio.NewScanner(conn)
+
+	const maxTokenSize = 1 * 64 * 1024 // force 64KB to be the max
+	const initBufSize = 4 * 1024
+
+	buf := make([]byte, initBufSize, maxTokenSize) // 64KB
+
+	scanner := bufio.NewScanner(conn) // Can read up to 64KB by default
+	scanner.Buffer(buf, maxTokenSize)
+
 	for scanner.Scan() {
-		cmd := strings.Split(scanner.Text(), " ")
+		cmd := strings.SplitN(scanner.Text(), " ", 3)
 		switch cmd[0] {
 		case "SET":
 			if len(cmd) != 3 {
@@ -107,6 +115,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "DELETE":
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: DELETE <key>\n")
+				continue
 			}
 
 			res := c.Delete(cmd[1])
@@ -121,6 +130,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 			if len(cmd) != 1 {
 
 				fmt.Fprintf(conn, "ERROR: Usage: FLUSH\n")
+				continue
 			}
 
 			res := c.Flush()
@@ -135,6 +145,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 			if len(cmd) != 1 {
 
 				fmt.Fprintf(conn, "ERROR: Usage: KEYS\n")
+				continue
 			}
 
 			keys := c.Keys()
