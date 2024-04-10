@@ -8,14 +8,15 @@ import (
 )
 
 func main() {
-	newClient, err := client.NewClient("localhost:31337")
+	newPool := client.NewConnPool(5, "localhost:31337")
+	newClient, err := client.NewClient(newPool)
 
 	if err != nil {
 
 		log.Fatalf("failed to establish connection %s", err)
 	}
 
-	defer newClient.Close()
+	//defer newClient.Close()
 
 	resp, err := newClient.Set("testKey", "testValue\\n1111")
 	if err != nil {

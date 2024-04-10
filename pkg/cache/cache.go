@@ -159,6 +159,10 @@ func HandleConnection(conn net.Conn, c *Cache) {
 				fmt.Fprintf(conn, "%s\n", key)
 			}
 
+		case "PING":
+
+			fmt.Fprintf(conn, "PONG\n")
+			return
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")

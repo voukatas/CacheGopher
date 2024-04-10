@@ -4,46 +4,105 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"sync"
 )
 
-type Client struct {
-	conn    net.Conn
-	scanner *bufio.Scanner
-	lock    sync.RWMutex
+type ConnPool struct {
+	pool    chan net.Conn
+	address string
+	size    int
 }
 
-func NewClient(address string) (*Client, error) {
-	conn, err := net.Dial("tcp", address)
+func NewConnPool(size int, address string) *ConnPool {
+	return &ConnPool{
+		pool:    make(chan net.Conn, size),
+		address: address,
+		// size:    size,
+	}
+}
 
-	if err != nil {
-		return nil, err
+func (cp *ConnPool) Get() (net.Conn, error) {
+
+	select {
+	case conn := <-cp.pool:
+		return conn, nil
+
+	default:
+
+		conn, err := net.Dial("tcp", cp.address)
+
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+}
+
+func (cp *ConnPool) Return(conn net.Conn) error {
+	// fmt.Println("Return called")
+	// if _, err := conn.Write([]byte("PING")); err != nil {
+	// 	conn.Close()
+	// 	return err
+	// }
+
+	select {
+	case cp.pool <- conn:
+	// return the connection to the pool
+	default:
+		// pool is full so drop it
+		conn.Close()
 	}
 
+	return nil
+}
+
+type Client struct {
+	pool *ConnPool
+	// conn    net.Conn
+	// scanner *bufio.Scanner
+	// lock    sync.RWMutex
+}
+
+func NewClient(pool *ConnPool) (*Client, error) {
+	// conn, err := net.Dial("tcp", address)
+	//
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	return &Client{
-		conn:    conn,
-		scanner: bufio.NewScanner(conn),
-		lock:    sync.RWMutex{},
+		pool: pool,
+		// conn:    conn,
+		// scanner: bufio.NewScanner(conn),
+		// lock:    sync.RWMutex{},
 	}, nil
 }
 
-func (c *Client) Close() {
-	c.conn.Close()
-}
+// func (c *Client) Close() {
+// 	c.conn.Close()
+// }
 
 func sendCommand(c *Client, cmd string) (string, error) {
-	// fmt.Fprintf(c.conn, cmd+"\n")
-	cmdBytes := []byte(cmd + "\n")
-	_, err := c.conn.Write(cmdBytes)
+	conn, err := c.pool.Get()
 	if err != nil {
 		return "", err
 	}
 
-	if c.scanner.Scan() {
-		return c.scanner.Text(), nil
+	cmdBytes := []byte(cmd + "\n")
+	_, err = conn.Write(cmdBytes)
+	if err != nil {
+		conn.Close()
+		return "", err
 	}
 
-	if err := c.scanner.Err(); err != nil {
+	defer c.pool.Return(conn)
+
+	scanner := bufio.NewScanner(conn)
+
+	if scanner.Scan() {
+		return scanner.Text(), nil
+	}
+
+	if err := scanner.Err(); err != nil {
 		return "", err
 	}
 
@@ -51,8 +110,8 @@ func sendCommand(c *Client, cmd string) (string, error) {
 }
 
 func (c *Client) Set(k, v string) (string, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	// c.lock.Lock()
+	// defer c.lock.Unlock()
 	cmd := fmt.Sprintf("SET %s %s", k, v)
 	resp, err := sendCommand(c, cmd)
 
@@ -60,8 +119,8 @@ func (c *Client) Set(k, v string) (string, error) {
 }
 
 func (c *Client) Get(k string) (string, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	// c.lock.RLock()
+	// defer c.lock.RUnlock()
 	cmd := fmt.Sprintf("GET %s", k)
 	res, err := sendCommand(c, cmd)
 

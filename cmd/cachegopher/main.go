@@ -21,7 +21,7 @@ func main() {
 
 	listener, err := net.Listen("tcp", "localhost:31337")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to start server: %s", err)
 	}
 
 	defer listener.Close()
@@ -31,7 +31,7 @@ func main() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err)
+			fmt.Printf("Error accepting connection: %s", err)
 			continue
 		}
 		go cache.HandleConnection(conn, localCache)
