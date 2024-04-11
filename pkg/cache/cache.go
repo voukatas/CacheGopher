@@ -96,21 +96,26 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "SET":
 			if len(cmd) != 3 {
 				fmt.Fprintf(conn, "ERROR: Usage: SET <key> <value>\n")
+				fmt.Printf("ERROR: Usage: SET <key> <value>\n")
 				continue
 			}
 			c.Set(cmd[1], cmd[2])
 			fmt.Fprintf(conn, "OK\n")
+			fmt.Printf("SET OK\n")
 		case "GET":
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
+				fmt.Printf("ERROR: Usage: GET <key>\n")
 				continue
 			}
 			v, ok := c.Get(cmd[1])
 			if !ok {
 				fmt.Fprintf(conn, "ERROR: Key not found\n")
+				fmt.Printf("ERROR: Key not found\n")
 				continue
 			}
 			fmt.Fprintf(conn, "%s\n", v)
+			fmt.Printf("%s\n", v)
 
 		case "DELETE":
 			if len(cmd) != 2 {
@@ -162,7 +167,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "PING":
 
 			fmt.Fprintf(conn, "PONG\n")
-			return
+			fmt.Printf("PONG\n")
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")
@@ -179,4 +184,5 @@ func HandleConnection(conn net.Conn, c *Cache) {
 
 	}
 
+	fmt.Println("HandleConnection finished")
 }

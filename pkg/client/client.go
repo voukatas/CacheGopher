@@ -5,36 +5,90 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 )
 
+type PoolConn struct {
+	conn      net.Conn
+	scanner   *bufio.Scanner
+	createdAt time.Time
+}
+
 type ConnPool struct {
-	pool    chan net.Conn
+	pool    chan *PoolConn
 	address string
 	// size    int
 }
 
+func (pc *PoolConn) isExpired() bool {
+	const maxValidTime = 5 * time.Minute
+	return time.Since(pc.createdAt) > maxValidTime
+}
+
+func (pc *PoolConn) isValid() bool {
+	// can be set from config if we need to use this fc
+
+	_, err := pc.conn.Write([]byte("PING\n"))
+	if err != nil {
+		fmt.Println("isValid is false 1")
+		return false
+	}
+
+	if ok := pc.scanner.Scan(); !ok {
+		if err := pc.scanner.Err(); err != nil {
+			fmt.Println("Scanner error on reading:", err)
+			return false
+		}
+		fmt.Println("isValid is false 2: No data read")
+		return false
+	}
+
+	if pc.scanner.Text() != "PONG" {
+		fmt.Println("isValid is false 3: Unexpected response", pc.scanner.Text())
+		return false
+	}
+
+	fmt.Println("isValid is true")
+	return true
+
+}
+
+func (pc *PoolConn) Close() {
+	pc.conn.Close()
+}
+
 func NewConnPool(size int, address string) *ConnPool {
 	return &ConnPool{
-		pool:    make(chan net.Conn, size),
+		pool:    make(chan *PoolConn, size),
 		address: address,
 		// size:    size,
 	}
 }
 
-func (cp *ConnPool) Get() (net.Conn, error) {
+func (cp *ConnPool) Get() (*PoolConn, error) {
+	fmt.Println("Get called")
 
-	select {
-	case conn := <-cp.pool:
-		return conn, nil
+	for {
+		select {
+		case poolConn := <-cp.pool:
+			if poolConn.isExpired() || !poolConn.isValid() {
+				fmt.Println("isExpired or is invalid")
+				poolConn.Close()
+				continue
+			}
+			fmt.Println("found poolConn")
+			return poolConn, nil
 
-	default:
+		default:
 
-		return cp.dialWithBackOff()
+			return cp.dialWithBackOff()
+		}
 	}
 }
 
-func (cp *ConnPool) dialWithBackOff() (net.Conn, error) {
+func (cp *ConnPool) dialWithBackOff() (*PoolConn, error) {
+	fmt.Println("dialWithBackOff")
 	maxAttempts := 3
 	baseTime := 100 * time.Millisecond
 	maxBackoff := 1 * time.Second
@@ -47,7 +101,8 @@ func (cp *ConnPool) dialWithBackOff() (net.Conn, error) {
 		conn, err = net.Dial("tcp", cp.address)
 
 		if err == nil {
-			return conn, nil
+			poolConn := &PoolConn{conn: conn, scanner: bufio.NewScanner(conn), createdAt: time.Now()}
+			return poolConn, nil
 		}
 
 		// consider adding a more sophisticated jitter approach
@@ -65,7 +120,7 @@ func (cp *ConnPool) dialWithBackOff() (net.Conn, error) {
 
 }
 
-func (cp *ConnPool) Return(conn net.Conn) error {
+func (cp *ConnPool) Return(poolConn *PoolConn) error {
 	// fmt.Println("Return called")
 	// if _, err := conn.Write([]byte("PING")); err != nil {
 	// 	conn.Close()
@@ -73,11 +128,11 @@ func (cp *ConnPool) Return(conn net.Conn) error {
 	// }
 
 	select {
-	case cp.pool <- conn:
+	case cp.pool <- poolConn:
 	// return the connection to the pool
 	default:
 		// pool is full so drop it
-		conn.Close()
+		poolConn.Close()
 	}
 
 	return nil
@@ -110,21 +165,34 @@ func NewClient(pool *ConnPool) (*Client, error) {
 // }
 
 func sendCommand(c *Client, cmd string) (string, error) {
+	const maxTokenSize = 64 * 1024
+
+	if strings.Contains(cmd, "\n") {
+		fmt.Println("Invalid Data, data can't contain the newline chars")
+		return "", fmt.Errorf("data cannot contain newline chars")
+	}
+
+	cmdBytes := []byte(cmd + "\n")
+	if len(cmdBytes) > maxTokenSize {
+		fmt.Println("data exceeds the maximum allowed size of 64KB")
+		return "", fmt.Errorf("data exceeds the maximum allowed size of 64KB")
+
+	}
+
 	attempts := 2
-	var conn net.Conn
+	var poolConn *PoolConn
 	var err error
 
 	for attempts > 0 {
-		conn, err = c.pool.Get()
+		poolConn, err = c.pool.Get()
 		if err != nil {
 			return "", err
 		}
 
-		cmdBytes := []byte(cmd + "\n")
-		_, err = conn.Write(cmdBytes)
+		_, err = poolConn.conn.Write(cmdBytes)
 
 		if err != nil {
-			conn.Close()
+			poolConn.Close()
 			attempts--
 			if attempts <= 0 {
 				return "", err
@@ -136,15 +204,15 @@ func sendCommand(c *Client, cmd string) (string, error) {
 
 		break
 	}
-	defer c.pool.Return(conn)
+	defer c.pool.Return(poolConn)
 
-	scanner := bufio.NewScanner(conn)
+	//poolConn.scanner = bufio.NewScanner(poolConn.conn)
 
-	if scanner.Scan() {
-		return scanner.Text(), nil
+	if poolConn.scanner.Scan() {
+		return poolConn.scanner.Text(), nil
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err := poolConn.scanner.Err(); err != nil {
 		return "", err
 	}
 
@@ -165,6 +233,14 @@ func (c *Client) Get(k string) (string, error) {
 	// defer c.lock.RUnlock()
 	cmd := fmt.Sprintf("GET %s", k)
 	res, err := sendCommand(c, cmd)
+
+	return res, err
+
+}
+
+func (c *Client) Ping() (string, error) {
+
+	res, err := sendCommand(c, "PING")
 
 	return res, err
 
