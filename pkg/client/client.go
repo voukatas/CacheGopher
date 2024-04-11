@@ -3,13 +3,15 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"net"
+	"time"
 )
 
 type ConnPool struct {
 	pool    chan net.Conn
 	address string
-	size    int
+	// size    int
 }
 
 func NewConnPool(size int, address string) *ConnPool {
@@ -28,13 +30,39 @@ func (cp *ConnPool) Get() (net.Conn, error) {
 
 	default:
 
-		conn, err := net.Dial("tcp", cp.address)
-
-		if err != nil {
-			return nil, err
-		}
-		return conn, nil
+		return cp.dialWithBackOff()
 	}
+}
+
+func (cp *ConnPool) dialWithBackOff() (net.Conn, error) {
+	maxAttempts := 3
+	baseTime := 100 * time.Millisecond
+	maxBackoff := 1 * time.Second
+
+	var conn net.Conn
+	var err error
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+
+		conn, err = net.Dial("tcp", cp.address)
+
+		if err == nil {
+			return conn, nil
+		}
+
+		// consider adding a more sophisticated jitter approach
+		jitter := time.Duration(rand.Int63n(100)) * time.Millisecond
+		delay := time.Duration(1<<attempt)*baseTime + jitter
+
+		if delay > maxBackoff {
+			delay = maxBackoff
+		}
+
+		time.Sleep(delay)
+	}
+
+	return nil, err
+
 }
 
 func (cp *ConnPool) Return(conn net.Conn) error {
@@ -82,18 +110,32 @@ func NewClient(pool *ConnPool) (*Client, error) {
 // }
 
 func sendCommand(c *Client, cmd string) (string, error) {
-	conn, err := c.pool.Get()
-	if err != nil {
-		return "", err
-	}
+	attempts := 2
+	var conn net.Conn
+	var err error
 
-	cmdBytes := []byte(cmd + "\n")
-	_, err = conn.Write(cmdBytes)
-	if err != nil {
-		conn.Close()
-		return "", err
-	}
+	for attempts > 0 {
+		conn, err = c.pool.Get()
+		if err != nil {
+			return "", err
+		}
 
+		cmdBytes := []byte(cmd + "\n")
+		_, err = conn.Write(cmdBytes)
+
+		if err != nil {
+			conn.Close()
+			attempts--
+			if attempts <= 0 {
+				return "", err
+			}
+
+			continue
+
+		}
+
+		break
+	}
 	defer c.pool.Return(conn)
 
 	scanner := bufio.NewScanner(conn)
