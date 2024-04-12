@@ -36,42 +36,40 @@ func main() {
 		fmt.Printf("Response from cache server: %s\n", resp)
 	}
 
-	/*
-	   // tests
-	   resp, err = newClient.Set("testKey1", "testValue1\\n1111")
-	   if err != nil {
+	// tests
+	resp, err = newClient.Set("testKey1", "testValue1\\n1111")
+	if err != nil {
 
-	   	fmt.Printf("failed to SET key, error: %s", err)
+		fmt.Printf("failed to SET key, error: %s", err)
 
-	   	} else {
-	   		fmt.Printf("Response from cache server: %s\n", resp)
-	   	}
+	} else {
+		fmt.Printf("Response from cache server: %s\n", resp)
+	}
 
-	   resp, err = newClient.Get("testKey1")
-	   if err != nil {
+	resp, err = newClient.Get("testKey1")
+	if err != nil {
 
-	   		fmt.Printf("failed to GET key, error: %s", err)
-	   	} else {
+		fmt.Printf("failed to GET key, error: %s", err)
+	} else {
 
-	   		fmt.Printf("Response from cache server: %s\n", resp)
-	   	}
+		fmt.Printf("Response from cache server: %s\n", resp)
+	}
 
-	   resp, err = newClient.Set("testKey2", "testValue2\\n1111")
-	   if err != nil {
+	resp, err = newClient.Set("testKey2", "testValue2\\n1111")
+	if err != nil {
 
-	   	fmt.Printf("failed to SET key, error: %s", err)
+		fmt.Printf("failed to SET key, error: %s", err)
 
-	   	} else {
-	   		fmt.Printf("Response from cache server: %s\n", resp)
-	   	}
+	} else {
+		fmt.Printf("Response from cache server: %s\n", resp)
+	}
 
-	   resp, err = newClient.Get("testKey2")
-	   if err != nil {
+	resp, err = newClient.Get("testKey2")
+	if err != nil {
 
-	   		fmt.Printf("failed to GET key, error: %s", err)
-	   	} else {
+		fmt.Printf("failed to GET key, error: %s", err)
+	} else {
 
-	   		fmt.Printf("Response from cache server: %s\n", resp)
-	   	}
-	*/
+		fmt.Printf("Response from cache server: %s\n", resp)
+	}
 }

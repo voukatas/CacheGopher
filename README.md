@@ -12,6 +12,8 @@ The purpose is to build a Distributed In-Memory Key-Value Store which will focus
 
 - TCP is used to send/receive data
 - Keys can't have whitespaces, Values of the keys can be up to 64KB
+- The client lib uses a connection pool and a lazy validation on Failure strategy for the connections. It implements a backoff strategy and also sets an expiration on connections to avoid any stale/broken connections in the pool.
+- The key-value cannot contain a new line char (\n). If you want to include it then you need to escape it (\\n)
 
 # How to build/run
 

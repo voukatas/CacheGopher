@@ -2,10 +2,10 @@ package client
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"math/rand"
 	"net"
-	"strings"
 	"time"
 )
 
@@ -102,6 +102,7 @@ func (cp *ConnPool) dialWithBackOff() (*PoolConn, error) {
 
 		if err == nil {
 			poolConn := &PoolConn{conn: conn, scanner: bufio.NewScanner(conn), createdAt: time.Now()}
+			fmt.Println("Successfully Created poolConn")
 			return poolConn, nil
 		}
 
@@ -164,18 +165,30 @@ func NewClient(pool *ConnPool) (*Client, error) {
 // 	c.conn.Close()
 // }
 
-func sendCommand(c *Client, cmd string) (string, error) {
+func validateCommand(cmdBytes []byte) error {
 	const maxTokenSize = 64 * 1024
 
-	if strings.Contains(cmd, "\n") {
-		fmt.Println("Invalid Data, data can't contain the newline chars")
-		return "", fmt.Errorf("data cannot contain newline chars")
-	}
-
-	cmdBytes := []byte(cmd + "\n")
 	if len(cmdBytes) > maxTokenSize {
 		fmt.Println("data exceeds the maximum allowed size of 64KB")
-		return "", fmt.Errorf("data exceeds the maximum allowed size of 64KB")
+		return fmt.Errorf("command exceeds the maximum allowed size of 64KB")
+
+	}
+
+	if bytes.Contains(cmdBytes[:len(cmdBytes)-1], []byte("\n")) {
+		fmt.Println("Invalid Data, data can't contain the newline chars")
+		return fmt.Errorf("command cannot contain newline characters")
+	}
+
+	return nil
+}
+
+func sendCommand(c *Client, cmd string) (string, error) {
+
+	cmdBytes := []byte(cmd + "\n")
+
+	if err := validateCommand(cmdBytes); err != nil {
+		fmt.Println(err)
+		return "", err
 
 	}
 
@@ -209,6 +222,7 @@ func sendCommand(c *Client, cmd string) (string, error) {
 	//poolConn.scanner = bufio.NewScanner(poolConn.conn)
 
 	if poolConn.scanner.Scan() {
+		fmt.Println("Data from read: ", poolConn.scanner.Text())
 		return poolConn.scanner.Text(), nil
 	}
 
@@ -245,3 +259,5 @@ func (c *Client) Ping() (string, error) {
 	return res, err
 
 }
+
+// pending to implement the other commands, FLUSH DELETE
