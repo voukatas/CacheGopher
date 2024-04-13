@@ -2,11 +2,13 @@
 package client
 
 import (
-	"github.com/voukatas/CacheGopher/pkg/cache"
 	"net"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/voukatas/CacheGopher/pkg/cache"
+	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
 func TestMain(m *testing.M) {
@@ -17,7 +19,9 @@ func TestMain(m *testing.M) {
 }
 
 func startTestServer(t *testing.T) (*net.Listener, error) {
-	localCache := cache.NewCache()
+	tlogger := logger.SetupTestLogger()
+	localCache := cache.NewCache(tlogger)
+
 	listener, err := net.Listen("tcp", "localhost:12345")
 	if err != nil {
 		t.Fatalf("Failed to start server: %s", err)
@@ -39,14 +43,4 @@ func startTestServer(t *testing.T) (*net.Listener, error) {
 	// small delay
 	time.Sleep(time.Second)
 	return &listener, nil
-}
-
-func TestPing(t *testing.T) {
-	listener, err := startTestServer(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer (*listener).Close()
-
-	// Your client setup and test execution logic here
 }

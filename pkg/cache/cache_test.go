@@ -7,7 +7,7 @@ import (
 )
 
 func TestCacheSetAndGet(t *testing.T) {
-	cache := NewCache()
+	cache := NewTestCache()
 	key, value := "testKey", "testValue"
 	cache.Set(key, value)
 
@@ -17,7 +17,7 @@ func TestCacheSetAndGet(t *testing.T) {
 }
 
 func TestCacheDelete(t *testing.T) {
-	cache := NewCache()
+	cache := NewTestCache()
 	key := "testKey"
 	cache.Set(key, "value")
 	cache.Delete(key)
@@ -28,7 +28,7 @@ func TestCacheDelete(t *testing.T) {
 }
 
 func TestCacheFlush(t *testing.T) {
-	cache := NewCache()
+	cache := NewTestCache()
 	cache.Set("key1", "value1")
 	cache.Set("key2", "value2")
 	cache.Flush()
@@ -39,7 +39,7 @@ func TestCacheFlush(t *testing.T) {
 }
 
 func TestCacheKeys(t *testing.T) {
-	cache := NewCache()
+	cache := NewTestCache()
 	keys := []string{"key1", "key2", "key3"}
 
 	for _, key := range keys {
@@ -64,7 +64,7 @@ func TestCacheKeys(t *testing.T) {
 }
 
 func TestCacheConcurrentSetAndGet(t *testing.T) {
-	c := NewCache()
+	cache := NewTestCache()
 	var wg sync.WaitGroup
 	itemCount := 100
 	keyBase := "key"
@@ -74,7 +74,7 @@ func TestCacheConcurrentSetAndGet(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			c.Set(keyBase+strconv.Itoa(i), valueBase+strconv.Itoa(i))
+			cache.Set(keyBase+strconv.Itoa(i), valueBase+strconv.Itoa(i))
 		}(i)
 
 	}
@@ -88,7 +88,7 @@ func TestCacheConcurrentSetAndGet(t *testing.T) {
 			key := keyBase + strconv.Itoa(i)
 			expectedValue := valueBase + strconv.Itoa(i)
 
-			if v, ok := c.Get(key); !ok || v != expectedValue {
+			if v, ok := cache.Get(key); !ok || v != expectedValue {
 				t.Errorf("Cache.Get(%s) = %s; want %s", key, v, expectedValue)
 			}
 		}(i)

@@ -6,7 +6,7 @@ import (
 )
 
 func BenchmarkCacheSet(b *testing.B) {
-	c := NewCache()
+	c := NewTestCache()
 	for i := 0; i < b.N; i++ {
 		key := "key" + strconv.Itoa(i)
 		value := "value" + strconv.Itoa(i)
@@ -15,7 +15,7 @@ func BenchmarkCacheSet(b *testing.B) {
 }
 
 func BenchmarkCacheGet(b *testing.B) {
-	c := NewCache()
+	c := NewTestCache()
 
 	for i := 0; i < 100; i++ {
 		key := "key" + strconv.Itoa(i)
@@ -33,7 +33,7 @@ func BenchmarkCacheGet(b *testing.B) {
 }
 
 func BenchmarkCacheDelete(b *testing.B) {
-	c := NewCache()
+	c := NewTestCache()
 	for i := 0; i < b.N; i++ {
 		key := "key" + strconv.Itoa(i)
 		value := "value" + strconv.Itoa(i)

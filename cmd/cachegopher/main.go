@@ -1,40 +1,65 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
+	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
 func main() {
 
-	localCache := cache.NewCache()
-	// numOfKeys := cache.Set("mykey", "1")
-	// fmt.Println("numOfKeys: ", numOfKeys)
-	// cache.Set("mykey2", "2")
-	// item1, exists := cache.Get("mykey2")
-	// if exists {
-	// 	fmt.Println("item: ", item1)
-	// }
+	slogger, cleanup := logger.SetupLogger("cacheGopherServer.log", "debug")
+
+	defer cleanup()
+
+	localCache := cache.NewCache(slogger)
 
 	listener, err := net.Listen("tcp", "localhost:31337")
 	if err != nil {
-		log.Fatalf("Failed to start server: %s", err)
+		slogger.Error("Failed to start server: ", err)
+		os.Exit(1)
 	}
 
 	defer listener.Close()
 
-	fmt.Println("Server is running on localhost:31337")
+	slogger.Info("Server is running on localhost:31337")
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Printf("Error accepting connection: %s", err)
-			continue
+	// handle signals for gracefull shutdown
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+
+	done := make(chan struct{})
+
+	go func() {
+		<-stopChan
+		slogger.Info("Graceful Shutdown...")
+		close(done)
+
+	}()
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				select {
+				case <-done:
+					slogger.Info("Listener closed")
+					return
+				default:
+					slogger.Error("Error accepting connection: ", err)
+				}
+				continue
+			}
+			go cache.HandleConnection(conn, localCache)
 		}
-		go cache.HandleConnection(conn, localCache)
-	}
+	}()
+
+	<-done
+	slogger.Info("Server stopped")
+	// cleanup() and listener.Close() are called
 
 }

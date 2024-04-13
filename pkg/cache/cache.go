@@ -3,21 +3,24 @@ package cache
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
 )
 
 type Cache struct {
-	store map[string]string
-	lock  sync.RWMutex
-	size  int64
+	store  map[string]string
+	lock   sync.RWMutex
+	logger *slog.Logger
+	size   int64
 }
 
-func NewCache() *Cache {
+func NewCache(logger *slog.Logger) *Cache {
 	return &Cache{
-		store: make(map[string]string, 0),
-		size:  0,
+		store:  make(map[string]string, 0),
+		logger: logger,
+		size:   0,
 	}
 }
 
@@ -96,26 +99,26 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "SET":
 			if len(cmd) != 3 {
 				fmt.Fprintf(conn, "ERROR: Usage: SET <key> <value>\n")
-				fmt.Printf("ERROR: Usage: SET <key> <value>\n")
+				c.logger.Error("ERROR: Usage: SET <key> <value>")
 				continue
 			}
 			c.Set(cmd[1], cmd[2])
 			fmt.Fprintf(conn, "OK\n")
-			fmt.Printf("SET OK\n")
+			c.logger.Debug("SET OK")
 		case "GET":
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
-				fmt.Printf("ERROR: Usage: GET <key>\n")
+				c.logger.Debug("ERROR: Usage: GET <key>")
 				continue
 			}
 			v, ok := c.Get(cmd[1])
 			if !ok {
 				fmt.Fprintf(conn, "ERROR: Key not found\n")
-				fmt.Printf("ERROR: Key not found\n")
+				c.logger.Debug("ERROR: Key not found")
 				continue
 			}
 			fmt.Fprintf(conn, "%s\n", v)
-			fmt.Printf("%s\n", v)
+			c.logger.Debug("GET", "value", v)
 
 		case "DELETE":
 			if len(cmd) != 2 {
@@ -167,7 +170,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "PING":
 
 			fmt.Fprintf(conn, "PONG\n")
-			fmt.Printf("PONG\n")
+			c.logger.Debug("PONG")
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")
@@ -184,5 +187,5 @@ func HandleConnection(conn net.Conn, c *Cache) {
 
 	}
 
-	fmt.Println("HandleConnection finished")
+	c.logger.Debug("HandleConnection finished")
 }
