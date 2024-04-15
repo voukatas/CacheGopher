@@ -2,7 +2,9 @@
     "server": {
 	"address": "localhost",
         "port": "31337",
-	"production": false
+	"production": false,
+	"maxSize": 10000
+
     },
     "logging": {
         "level": "debug",

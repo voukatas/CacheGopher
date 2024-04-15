@@ -9,6 +9,7 @@ type ServerConfig struct {
 	Address    string `json:"address"`
 	Port       string `json:"port"`
 	Production bool   `json:"production"`
+	MaxSize    int    `json:"maxSize"`
 }
 
 type LoggingConfig struct {
