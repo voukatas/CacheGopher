@@ -3,20 +3,21 @@ package cache
 import (
 	"bufio"
 	"fmt"
-	"log/slog"
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
 type Cache struct {
 	store  map[string]string
 	lock   sync.RWMutex
-	logger *slog.Logger
+	logger logger.Logger
 	size   int64
 }
 
-func NewCache(logger *slog.Logger) *Cache {
+func NewCache(logger logger.Logger) *Cache {
 	return &Cache{
 		store:  make(map[string]string, 0),
 		logger: logger,
@@ -118,7 +119,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 				continue
 			}
 			fmt.Fprintf(conn, "%s\n", v)
-			c.logger.Debug("GET", "value", v)
+			c.logger.Debug("GET" + " value:" + v)
 
 		case "DELETE":
 			if len(cmd) != 2 {

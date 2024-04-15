@@ -1,19 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"os"
 
 	"github.com/voukatas/CacheGopher/pkg/client"
+	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
 func main() {
+
+	clog := logger.SetupDebugLogger()
+
 	newPool := client.NewConnPool(3, "localhost:31337")
-	newClient, err := client.NewClient(newPool)
+	newClient, err := client.NewClient(newPool, false)
 
 	if err != nil {
 
-		log.Fatalf("failed to establish connection %s", err)
+		clog.Debug("failed to establish connection" + "error" + err.Error())
+		os.Exit(1)
 	}
 
 	//defer newClient.Close()
@@ -21,55 +25,54 @@ func main() {
 	resp, err := newClient.Set("testKey", "testValue\\n1111")
 	if err != nil {
 
-		fmt.Printf("failed to SET key, error: %s", err)
+		clog.Debug("failed to SET key, error" + "error" + err.Error())
 
 	} else {
-		fmt.Printf("Response from cache server: %s\n", resp)
+		clog.Debug("Response from cache server" + "resp" + resp)
 	}
 
 	resp, err = newClient.Get("testKey")
 	if err != nil {
 
-		fmt.Printf("failed to GET key, error: %s\n", err)
+		clog.Debug("failed to GET key, error" + "error" + err.Error())
 	} else {
 
-		fmt.Printf("Response from cache server: %s\n", resp)
+		clog.Debug("Response from cache server" + "resp" + resp)
 	}
 
 	// tests
-	resp, err = newClient.Set("testKey1", "testValue1\\n1111")
+	resp, err = newClient.Set("testKey1", "testValue\\n1111")
 	if err != nil {
 
-		fmt.Printf("failed to SET key, error: %s", err)
+		clog.Debug("failed to SET key, error" + "error" + err.Error())
 
 	} else {
-		fmt.Printf("Response from cache server: %s\n", resp)
+		clog.Debug("Response from cache server" + "resp" + resp)
 	}
 
 	resp, err = newClient.Get("testKey1")
 	if err != nil {
 
-		fmt.Printf("failed to GET key, error: %s", err)
+		clog.Debug("failed to GET key, error" + "error" + err.Error())
 	} else {
 
-		fmt.Printf("Response from cache server: %s\n", resp)
+		clog.Debug("Response from cache server" + "resp" + resp)
 	}
-
-	resp, err = newClient.Set("testKey2", "testValue2\\n1111")
+	resp, err = newClient.Set("testKey2", "testValue\\n1111")
 	if err != nil {
 
-		fmt.Printf("failed to SET key, error: %s", err)
+		clog.Debug("failed to SET key, error" + "error" + err.Error())
 
 	} else {
-		fmt.Printf("Response from cache server: %s\n", resp)
+		clog.Debug("Response from cache server" + "resp" + resp)
 	}
 
 	resp, err = newClient.Get("testKey2")
 	if err != nil {
 
-		fmt.Printf("failed to GET key, error: %s", err)
+		clog.Debug("failed to GET key, error" + "error" + err.Error())
 	} else {
 
-		fmt.Printf("Response from cache server: %s\n", resp)
+		clog.Debug("Response from cache server" + "resp" + resp)
 	}
 }

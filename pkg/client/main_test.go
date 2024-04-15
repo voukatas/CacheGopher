@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 }
 
 func startTestServer(t *testing.T) (*net.Listener, error) {
-	tlogger := logger.SetupTestLogger()
+	tlogger := logger.SetupDebugLogger()
 	localCache := cache.NewCache(tlogger)
 
 	listener, err := net.Listen("tcp", "localhost:12345")

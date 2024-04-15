@@ -20,7 +20,7 @@ func main() {
 
 	listener, err := net.Listen("tcp", "localhost:31337")
 	if err != nil {
-		slogger.Error("Failed to start server: ", err)
+		slogger.Error("Failed to start server: " + err.Error())
 		os.Exit(1)
 	}
 
@@ -50,7 +50,7 @@ func main() {
 					slogger.Info("Listener closed")
 					return
 				default:
-					slogger.Error("Error accepting connection: ", err)
+					slogger.Error("Error accepting connection: " + err.Error())
 				}
 				continue
 			}

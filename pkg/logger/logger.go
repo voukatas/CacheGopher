@@ -8,7 +8,24 @@ import (
 	"strings"
 )
 
-func SetupLogger(logFileName, level string) (*slog.Logger, func()) {
+// interface to decouple logging from logger
+type Logger interface {
+	Debug(msg string)
+	Info(msg string)
+	Warn(msg string)
+	Error(msg string)
+}
+
+type SlogWrapper struct {
+	logger *slog.Logger
+}
+
+func (s *SlogWrapper) Debug(msg string) { s.logger.Debug(msg) }
+func (s *SlogWrapper) Info(msg string)  { s.logger.Info(msg) }
+func (s *SlogWrapper) Warn(msg string)  { s.logger.Warn(msg) }
+func (s *SlogWrapper) Error(msg string) { s.logger.Error(msg) }
+
+func SetupLogger(logFileName, level string) (Logger, func()) {
 
 	var logLevel slog.Level
 
@@ -39,14 +56,16 @@ func SetupLogger(logFileName, level string) (*slog.Logger, func()) {
 
 	logger := slog.New(handler)
 
+	slogWrapper := &SlogWrapper{logger}
+
 	// constructor-cleanup idiom
-	return logger, func() {
+	return slogWrapper, func() {
 		fmt.Println("closing log file")
 		logOutput.Close()
 	}
 }
 
-func SetupTestLogger() *slog.Logger {
+func SetupDebugLogger() Logger {
 
 	logLevel := slog.LevelDebug
 
@@ -57,6 +76,7 @@ func SetupTestLogger() *slog.Logger {
 	handler := slog.NewTextHandler(os.Stdout, opts)
 
 	logger := slog.New(handler)
+	slogWrapper := &SlogWrapper{logger}
 
-	return logger
+	return slogWrapper
 }

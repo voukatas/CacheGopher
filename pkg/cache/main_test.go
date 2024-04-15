@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 
 func NewTestCache() *Cache {
 
-	tlogger := logger.SetupTestLogger()
+	tlogger := logger.SetupDebugLogger()
 	return &Cache{
 		store:  make(map[string]string, 0),
 		logger: tlogger,

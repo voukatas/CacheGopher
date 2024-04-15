@@ -15,7 +15,7 @@ func TestRealServerInteraction(t *testing.T) {
 
 	// setup client
 	pool := NewConnPool(1, "localhost:12345")
-	client, err := NewClient(pool)
+	client, err := NewClient(pool, true)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}

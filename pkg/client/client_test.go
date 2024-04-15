@@ -49,7 +49,7 @@ func TestClient(t *testing.T) {
 	time.Sleep(time.Second)
 
 	pool := NewConnPool(1, "localhost:3333")
-	client, err := NewClient(pool)
+	client, err := NewClient(pool, true)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
