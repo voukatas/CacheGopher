@@ -25,7 +25,7 @@ func (s *SlogWrapper) Info(msg string)  { s.logger.Info(msg) }
 func (s *SlogWrapper) Warn(msg string)  { s.logger.Warn(msg) }
 func (s *SlogWrapper) Error(msg string) { s.logger.Error(msg) }
 
-func SetupLogger(logFileName, level string) (Logger, func()) {
+func SetupLogger(logFileName, level string, prod bool) (Logger, func()) {
 
 	var logLevel slog.Level
 
@@ -53,6 +53,10 @@ func SetupLogger(logFileName, level string) (Logger, func()) {
 
 	mw := io.MultiWriter(logOutput, os.Stdout)
 	handler := slog.NewTextHandler(mw, opts)
+
+	if prod {
+		handler = slog.NewTextHandler(logOutput, opts)
+	}
 
 	logger := slog.New(handler)
 

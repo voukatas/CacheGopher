@@ -1,0 +1,11 @@
+{
+    "server": {
+	"address": "localhost",
+        "port": "31337",
+	"production": false
+    },
+    "logging": {
+        "level": "debug",
+        "file": "cacheGopherServer.log"
+    }
+}

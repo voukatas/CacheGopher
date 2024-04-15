@@ -1,24 +1,32 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
+	"github.com/voukatas/CacheGopher/pkg/config"
 	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
 func main() {
 
-	slogger, cleanup := logger.SetupLogger("cacheGopherServer.log", "debug")
+	config, err := config.LoadConfig("cacheGopherConfig.json")
+	if err != nil {
+		fmt.Println("Failed to read configuration: " + err.Error())
+		os.Exit(1)
+	}
+
+	slogger, cleanup := logger.SetupLogger(config.Logging.File, config.Logging.Level, config.Server.Production)
 
 	defer cleanup()
 
 	localCache := cache.NewCache(slogger)
 
-	listener, err := net.Listen("tcp", "localhost:31337")
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", config.Server.Address, config.Server.Port))
 	if err != nil {
 		slogger.Error("Failed to start server: " + err.Error())
 		os.Exit(1)
@@ -26,7 +34,7 @@ func main() {
 
 	defer listener.Close()
 
-	slogger.Info("Server is running on localhost:31337")
+	slogger.Info("Server is running on " + fmt.Sprintf("%s:%s", config.Server.Address, config.Server.Port))
 
 	// handle signals for gracefull shutdown
 	stopChan := make(chan os.Signal, 1)

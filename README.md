@@ -1,5 +1,5 @@
 # CacheGopher
-CacheGopher is an open-source project aimed at exploring the intricacies of building a distributed cache system using Go (Golang). Born out of curiosity and a passion for learning, this project serves as a playground for implementing advanced caching techniques, distributed system design patterns, and the powerful concurrency features of Go.
+CacheGopher is an open-source project aimed at exploring the intricacies of building a distributed cache system using Go (Golang). Born out of curiosity and a passion for learning, this project serves as a playground for implementing advanced caching techniques, distributed system design patterns, and the powerful concurrency features of Go. Additionally, everything will be implemented using only the standard library of Go!
 
 # Design
 The purpose is to build a Distributed In-Memory Key-Value Store which will focus on Availability rather than Consistency.It will use an Eventually Consistency model
@@ -9,6 +9,7 @@ The purpose is to build a Distributed In-Memory Key-Value Store which will focus
 - Partition Tolerance and Consistency: Read Replicas. The approach is to replicate data from the primary node to one or more secondary nodes. This way the system should be able to handle read-heavy workloads. Also the replication might be done in an async way. Further investigation on how to promote a replica node to a primary role in case the original primary node fails.
 
 # Current Functionality
+### Currently running as a standalone service, a server instance that is not distributed, and a sample client that is using the client library for demonstration. The client can use the SET, GET, DELETE methods. Also a proper logging system created for the internal logging of the client lib. Finally, you can connect directly to the server cache using telnet
 
 - TCP is used to send/receive data
 - Keys can't have whitespaces, Values of the keys can be up to 64KB
