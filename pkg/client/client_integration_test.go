@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -32,6 +33,15 @@ func TestRealServerInteraction(t *testing.T) {
 
 	// Test Get
 	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue" {
+		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	}
+
+	// Test Delete
+	if resp, err := client.Delete("testkey"); err != nil || resp != "OK" {
+		t.Errorf("Delete failed: resp=%s, err=%v", resp, err)
+	}
+
+	if resp, err := client.Get("testkey"); err != nil || !strings.Contains(resp, "Key not found") {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
 

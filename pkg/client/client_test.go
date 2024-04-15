@@ -37,6 +37,8 @@ func handleMockConnection(conn net.Conn) {
 			fmt.Fprintln(conn, "OK")
 		case strings.HasPrefix(text, "GET"):
 			fmt.Fprintln(conn, "VALUE")
+		case strings.HasPrefix(text, "DELETE"):
+			fmt.Fprintln(conn, "OK")
 		default:
 			fmt.Fprintln(conn, "ERROR")
 		}
@@ -65,6 +67,15 @@ func TestClient(t *testing.T) {
 	}
 
 	// Test Get
+	if resp, err := client.Get("key"); err != nil || resp != "VALUE" {
+		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	}
+
+	// Test Delete
+	if resp, err := client.Delete("key"); err != nil || resp != "OK" {
+		t.Errorf("Delete failed: resp=%s, err=%v", resp, err)
+	}
+
 	if resp, err := client.Get("key"); err != nil || resp != "VALUE" {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}

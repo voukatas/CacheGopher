@@ -41,6 +41,23 @@ func main() {
 	}
 
 	// tests
+	resp, err = newClient.Delete("testKey")
+	if err != nil {
+
+		clog.Debug("failed to GET key, error" + "error" + err.Error())
+	} else {
+
+		clog.Debug("Response from cache server" + "resp" + resp)
+	}
+	resp, err = newClient.Get("testKey")
+	if err != nil {
+
+		clog.Debug("failed to GET key, error" + "error" + err.Error())
+	} else {
+
+		clog.Debug("Response from cache server" + "resp" + resp)
+	}
+
 	resp, err = newClient.Set("testKey1", "testValue\\n1111")
 	if err != nil {
 

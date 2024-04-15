@@ -296,4 +296,12 @@ func (c *Client) Ping() (string, error) {
 
 }
 
+func (c *Client) Delete(k string) (string, error) {
+	cmd := fmt.Sprintf("DELETE %s", k)
+	res, err := sendCommand(c, cmd)
+
+	return res, err
+
+}
+
 // pending to implement the other commands, FLUSH DELETE
