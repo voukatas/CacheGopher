@@ -3,7 +3,8 @@
 	"address": "localhost",
         "port": "31337",
 	"production": false,
-	"maxSize": 10000
+	"max_size": 10000,
+        "eviction_policy": "LRU"
 
     },
     "logging": {

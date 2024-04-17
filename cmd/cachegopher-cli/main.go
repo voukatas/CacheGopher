@@ -58,7 +58,7 @@ func main() {
 		clog.Debug("Response from cache server" + "resp" + resp)
 	}
 
-	resp, err = newClient.Set("testKey1", "testValue\\n1111")
+	resp, err = newClient.Set("testKey1", "testValue\\n111101")
 	if err != nil {
 
 		clog.Debug("failed to SET key, error" + "error" + err.Error())
@@ -75,7 +75,7 @@ func main() {
 
 		clog.Debug("Response from cache server" + "resp" + resp)
 	}
-	resp, err = newClient.Set("testKey2", "testValue\\n1111")
+	resp, err = newClient.Set("testKey2", "testValue\\n11112")
 	if err != nil {
 
 		clog.Debug("failed to SET key, error" + "error" + err.Error())

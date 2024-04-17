@@ -7,7 +7,7 @@ import (
 )
 
 func TestCacheSetAndGet(t *testing.T) {
-	cache := NewTestCache()
+	cache := NewTestCache(3)
 	key, value := "testKey", "testValue"
 	cache.Set(key, value)
 
@@ -17,7 +17,7 @@ func TestCacheSetAndGet(t *testing.T) {
 }
 
 func TestCacheDelete(t *testing.T) {
-	cache := NewTestCache()
+	cache := NewTestCache(3)
 	key := "testKey"
 	cache.Set(key, "value")
 	cache.Delete(key)
@@ -28,7 +28,7 @@ func TestCacheDelete(t *testing.T) {
 }
 
 func TestCacheFlush(t *testing.T) {
-	cache := NewTestCache()
+	cache := NewTestCache(3)
 	cache.Set("key1", "value1")
 	cache.Set("key2", "value2")
 	cache.Flush()
@@ -39,7 +39,7 @@ func TestCacheFlush(t *testing.T) {
 }
 
 func TestCacheKeys(t *testing.T) {
-	cache := NewTestCache()
+	cache := NewTestCache(3)
 	keys := []string{"key1", "key2", "key3"}
 
 	for _, key := range keys {
@@ -64,7 +64,7 @@ func TestCacheKeys(t *testing.T) {
 }
 
 func TestCacheConcurrentSetAndGet(t *testing.T) {
-	cache := NewTestCache()
+	cache := NewTestCache(100)
 	var wg sync.WaitGroup
 	itemCount := 100
 	keyBase := "key"

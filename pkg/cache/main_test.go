@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -14,12 +15,22 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func NewTestCache() *Cache {
+func NewTestCache(cap int) Cache {
 
 	tlogger := logger.SetupDebugLogger()
-	return &Cache{
-		store:  make(map[string]string, 0),
-		logger: tlogger,
-		size:   0,
+	cache, err := NewCache(tlogger, "LRU", cap)
+	if err != nil {
+		fmt.Println("failed to start cache: ", err.Error())
+		os.Exit(1)
+	}
+	return cache
+}
+
+func NewTestLRUCache(capacity int) *LRUCache {
+	return &LRUCache{
+		store:    make(map[string]*CacheItem, capacity),
+		capacity: capacity,
+		head:     nil,
+		tail:     nil,
 	}
 }

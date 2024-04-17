@@ -5,85 +5,53 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 
 	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
-type Cache struct {
-	store  map[string]string
-	lock   sync.RWMutex
-	logger logger.Logger
-	size   int64
+type Cache interface {
+	Set(key string, value string)
+	Get(key string) (string, bool)
+	Delete(key string) bool
+	Flush()
+	Keys() []string
+	SetLogger(logger.Logger)
+	GetLogger() logger.Logger
 }
 
-func NewCache(logger logger.Logger) *Cache {
-	return &Cache{
-		store:  make(map[string]string, 0),
-		logger: logger,
-		size:   0,
-	}
-}
+// type Cache struct {
+// 	store  map[string]string
+// 	lock   sync.RWMutex
+// 	logger logger.Logger
+// 	size   int64
+// }
 
-func (c *Cache) Set(key, value string) int64 {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if _, exists := c.store[key]; !exists {
-
-		c.size++
-	}
-	c.store[key] = value
-
-	return c.size
-}
-
-func (c *Cache) Get(key string) (string, bool) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	v, exists := c.store[key]
-
-	return v, exists
-}
-
-func (c *Cache) Delete(key string) bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if _, exists := c.store[key]; exists {
-
-		delete(c.store, key)
-		c.size--
-		return true
+func NewCache(logger logger.Logger, cacheType string, capacity int) (Cache, error) {
+	if capacity < 1 {
+		return nil, fmt.Errorf("capacity should be more than 1")
 	}
 
-	return false
-}
-
-func (c *Cache) Flush() bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.store = make(map[string]string)
-	c.size = 0
-	return true
-}
-
-func (c *Cache) Keys() []string {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	keys := make([]string, 0, len(c.store))
-
-	for k := range c.store {
-		keys = append(keys, k)
+	if logger == nil {
+		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
-	return keys
+	var c Cache
 
+	switch strings.ToUpper(cacheType) {
+	case "LRU":
+		c = NewLRUCache(capacity)
+		//c = NewLRUCache2(capacity)
+		c.SetLogger(logger)
+
+	//
+	default:
+		return nil, fmt.Errorf("Unknown cache type: %s", cacheType)
+	}
+
+	return c, nil
 }
 
-func HandleConnection(conn net.Conn, c *Cache) {
+func HandleConnection(conn net.Conn, c Cache) {
 	defer conn.Close()
 
 	const maxTokenSize = 1 * 64 * 1024 // force 64KB to be the max
@@ -100,26 +68,26 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "SET":
 			if len(cmd) != 3 {
 				fmt.Fprintf(conn, "ERROR: Usage: SET <key> <value>\n")
-				c.logger.Error("ERROR: Usage: SET <key> <value>")
+				c.GetLogger().Error("ERROR: Usage: SET <key> <value>")
 				continue
 			}
 			c.Set(cmd[1], cmd[2])
 			fmt.Fprintf(conn, "OK\n")
-			c.logger.Debug("SET OK")
+			c.GetLogger().Debug("SET OK")
 		case "GET":
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
-				c.logger.Debug("ERROR: Usage: GET <key>")
+				c.GetLogger().Debug("ERROR: Usage: GET <key>")
 				continue
 			}
 			v, ok := c.Get(cmd[1])
 			if !ok {
 				fmt.Fprintf(conn, "ERROR: Key not found\n")
-				c.logger.Debug("ERROR: Key not found")
+				c.GetLogger().Debug("ERROR: Key not found")
 				continue
 			}
 			fmt.Fprintf(conn, "%s\n", v)
-			c.logger.Debug("GET" + " value:" + v)
+			c.GetLogger().Debug("GET" + " value:" + v)
 
 		case "DELETE":
 			if len(cmd) != 2 {
@@ -142,13 +110,8 @@ func HandleConnection(conn net.Conn, c *Cache) {
 				continue
 			}
 
-			res := c.Flush()
-			if res {
-				fmt.Fprintf(conn, "OK\n")
-			} else {
-
-				fmt.Fprintf(conn, "ERROR: WTF (What a Terrible Failure)\n")
-			}
+			c.Flush()
+			fmt.Fprintf(conn, "OK\n")
 
 		case "KEYS":
 			if len(cmd) != 1 {
@@ -171,7 +134,7 @@ func HandleConnection(conn net.Conn, c *Cache) {
 		case "PING":
 
 			fmt.Fprintf(conn, "PONG\n")
-			c.logger.Debug("PONG")
+			c.GetLogger().Debug("PONG")
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")
@@ -188,5 +151,5 @@ func HandleConnection(conn net.Conn, c *Cache) {
 
 	}
 
-	c.logger.Debug("HandleConnection finished")
+	c.GetLogger().Debug("HandleConnection finished")
 }

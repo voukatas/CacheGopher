@@ -6,10 +6,11 @@ type Configuration struct {
 }
 
 type ServerConfig struct {
-	Address    string `json:"address"`
-	Port       string `json:"port"`
-	Production bool   `json:"production"`
-	MaxSize    int    `json:"maxSize"`
+	Address        string `json:"address"`
+	Port           string `json:"port"`
+	Production     bool   `json:"production"`
+	MaxSize        int    `json:"max_size"`
+	EvictionPolicy string `json:"eviction_policy"`
 }
 
 type LoggingConfig struct {

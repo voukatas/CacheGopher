@@ -20,15 +20,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	// if config.Server.MaxSize <1 {
+	// 	fmt.Println("Max Size of Cache cannot be less than 1")
+	// 	os.Exit(1)
+	// }
+
 	slogger, cleanup := logger.SetupLogger(config.Logging.File, config.Logging.Level, config.Server.Production)
 
 	defer cleanup()
 
-	localCache := cache.NewCache(slogger)
+	localCache, err := cache.NewCache(slogger, config.Server.EvictionPolicy, config.Server.MaxSize)
+
+	if err != nil {
+
+		fmt.Println("failed to start cache: ", err.Error())
+		os.Exit(1)
+
+	}
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", config.Server.Address, config.Server.Port))
 	if err != nil {
-		slogger.Error("Failed to start server: " + err.Error())
+		fmt.Println("Failed to start server: " + err.Error())
 		os.Exit(1)
 	}
 
