@@ -188,13 +188,13 @@ func (lru *LRUCache) Keys() []string {
 	return keys
 }
 
-func (lru *LRUCache) SetLogger(logger logger.Logger) {
-	lru.logger = logger
-}
-
-func (lru *LRUCache) GetLogger() logger.Logger {
-	return lru.logger
-}
+// func (lru *LRUCache) SetLogger(logger logger.Logger) {
+// 	lru.logger = logger
+// }
+//
+// func (lru *LRUCache) GetLogger() logger.Logger {
+// 	return lru.logger
+// }
 
 func (lru *LRUCache) PrintLRU() {
 	fmt.Println("LRU Q contents: ")
@@ -293,9 +293,9 @@ func (c *LRUCache2) Keys() []string {
 	return keys
 }
 
-func (lru *LRUCache2) SetLogger(logger logger.Logger) {
-	lru.logger = logger
-}
-func (lru *LRUCache2) GetLogger() logger.Logger {
-	return lru.logger
-}
+// func (lru *LRUCache2) SetLogger(logger logger.Logger) {
+// 	lru.logger = logger
+// }
+// func (lru *LRUCache2) GetLogger() logger.Logger {
+// 	return lru.logger
+// }

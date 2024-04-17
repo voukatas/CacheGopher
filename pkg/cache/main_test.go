@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-
-	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
 func TestMain(m *testing.M) {
@@ -17,8 +15,8 @@ func TestMain(m *testing.M) {
 
 func NewTestCache(cap int) Cache {
 
-	tlogger := logger.SetupDebugLogger()
-	cache, err := NewCache(tlogger, "LRU", cap)
+	//tlogger := logger.SetupDebugLogger()
+	cache, err := NewCache("LRU", cap)
 	if err != nil {
 		fmt.Println("failed to start cache: ", err.Error())
 		os.Exit(1)

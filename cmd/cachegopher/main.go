@@ -29,7 +29,7 @@ func main() {
 
 	defer cleanup()
 
-	localCache, err := cache.NewCache(slogger, config.Server.EvictionPolicy, config.Server.MaxSize)
+	localCache, err := cache.NewCache(config.Server.EvictionPolicy, config.Server.MaxSize)
 
 	if err != nil {
 
@@ -74,7 +74,7 @@ func main() {
 				}
 				continue
 			}
-			go cache.HandleConnection(conn, localCache)
+			go cache.HandleConnection(conn, localCache, slogger)
 		}
 	}()
 

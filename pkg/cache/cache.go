@@ -15,8 +15,8 @@ type Cache interface {
 	Delete(key string) bool
 	Flush()
 	Keys() []string
-	SetLogger(logger.Logger)
-	GetLogger() logger.Logger
+	// SetLogger(logger.Logger)
+	// GetLogger() logger.Logger
 }
 
 // type Cache struct {
@@ -26,14 +26,14 @@ type Cache interface {
 // 	size   int64
 // }
 
-func NewCache(logger logger.Logger, cacheType string, capacity int) (Cache, error) {
+func NewCache(cacheType string, capacity int) (Cache, error) {
 	if capacity < 1 {
 		return nil, fmt.Errorf("capacity should be more than 1")
 	}
-
-	if logger == nil {
-		return nil, fmt.Errorf("logger cannot be nil")
-	}
+	//
+	// if logger == nil {
+	// 	return nil, fmt.Errorf("logger cannot be nil")
+	// }
 
 	var c Cache
 
@@ -41,7 +41,7 @@ func NewCache(logger logger.Logger, cacheType string, capacity int) (Cache, erro
 	case "LRU":
 		c = NewLRUCache(capacity)
 		//c = NewLRUCache2(capacity)
-		c.SetLogger(logger)
+		//c.SetLogger(logger)
 
 	//
 	default:
@@ -51,7 +51,7 @@ func NewCache(logger logger.Logger, cacheType string, capacity int) (Cache, erro
 	return c, nil
 }
 
-func HandleConnection(conn net.Conn, c Cache) {
+func HandleConnection(conn net.Conn, c Cache, logger logger.Logger) {
 	defer conn.Close()
 
 	const maxTokenSize = 1 * 64 * 1024 // force 64KB to be the max
@@ -68,26 +68,26 @@ func HandleConnection(conn net.Conn, c Cache) {
 		case "SET":
 			if len(cmd) != 3 {
 				fmt.Fprintf(conn, "ERROR: Usage: SET <key> <value>\n")
-				c.GetLogger().Error("ERROR: Usage: SET <key> <value>")
+				logger.Error("ERROR: Usage: SET <key> <value>")
 				continue
 			}
 			c.Set(cmd[1], cmd[2])
 			fmt.Fprintf(conn, "OK\n")
-			c.GetLogger().Debug("SET OK")
+			logger.Debug("SET OK")
 		case "GET":
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
-				c.GetLogger().Debug("ERROR: Usage: GET <key>")
+				logger.Debug("ERROR: Usage: GET <key>")
 				continue
 			}
 			v, ok := c.Get(cmd[1])
 			if !ok {
 				fmt.Fprintf(conn, "ERROR: Key not found\n")
-				c.GetLogger().Debug("ERROR: Key not found")
+				logger.Debug("ERROR: Key not found")
 				continue
 			}
 			fmt.Fprintf(conn, "%s\n", v)
-			c.GetLogger().Debug("GET" + " value:" + v)
+			logger.Debug("GET" + " value:" + v)
 
 		case "DELETE":
 			if len(cmd) != 2 {
@@ -134,7 +134,7 @@ func HandleConnection(conn net.Conn, c Cache) {
 		case "PING":
 
 			fmt.Fprintf(conn, "PONG\n")
-			c.GetLogger().Debug("PONG")
+			logger.Debug("PONG")
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")
@@ -151,5 +151,5 @@ func HandleConnection(conn net.Conn, c Cache) {
 
 	}
 
-	c.GetLogger().Debug("HandleConnection finished")
+	logger.Debug("HandleConnection finished")
 }

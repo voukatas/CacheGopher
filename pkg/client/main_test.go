@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 
 func startTestServer(t *testing.T) (*net.Listener, error) {
 	tlogger := logger.SetupDebugLogger()
-	localCache, err := cache.NewCache(tlogger, "LRU", 10)
+	localCache, err := cache.NewCache("LRU", 10)
 	if err != nil {
 		fmt.Println("failed to start cache: ", err.Error())
 		os.Exit(1)
@@ -41,7 +41,7 @@ func startTestServer(t *testing.T) (*net.Listener, error) {
 				t.Log("Server stopped accepting connections")
 				return
 			}
-			go cache.HandleConnection(conn, localCache)
+			go cache.HandleConnection(conn, localCache, tlogger)
 		}
 	}()
 
