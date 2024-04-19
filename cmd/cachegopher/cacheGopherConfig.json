@@ -6,22 +6,40 @@
 },
   "servers": [
     {
-      "id": "server1",
+      "id": "server_A1",
       "address": "localhost:31337",
       "role": "primary",
-      "secondaries": ["server2", "server3"]	  	  
+      "secondaries": ["server_A2", "server_A3"]	  	  
     },
     {
-      "id": "server2",
+      "id": "server_A2",
       "address": "localhost:31338",
       "role": "secondary",
-      "primary": "server1"
+      "primary": "server_A1"
     },
     {
-      "id": "server3",
+      "id": "server_A3",
       "address": "localhost:31339",
       "role": "secondary",
-      "primary": "server1"
+      "primary": "server_A1"
+    },
+    {
+      "id": "server_B1",
+      "address": "localhost:32337",
+      "role": "primary",
+      "secondaries": ["server_B2", "server_B3"]	  	  
+    },
+    {
+      "id": "server_B2",
+      "address": "localhost:32338",
+      "role": "secondary",
+      "primary": "server_B1"
+    },
+    {
+      "id": "server_B3",
+      "address": "localhost:32339",
+      "role": "secondary",
+      "primary": "server_B1"
     }
   ],
   "logging": {
