@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -14,22 +15,60 @@ import (
 
 func main() {
 
-	config, err := config.LoadConfig("cacheGopherConfig.json")
+	serverId := flag.String("server-id", "", "Unique Identifier for the server")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig("cacheGopherConfig.json")
 	if err != nil {
 		fmt.Println("Failed to read configuration: " + err.Error())
 		os.Exit(1)
 	}
 
-	// if config.Server.MaxSize <1 {
-	// 	fmt.Println("Max Size of Cache cannot be less than 1")
-	// 	os.Exit(1)
+	// for _, server := range cfg.Servers {
+	// 	fmt.Printf("Server ID: %s, Address: %s, Role: %s\n", server.ID, server.Address, server.Role)
+	// 	if server.Role == "primary" {
+	// 		fmt.Println("Secondaries:", server.Secondaries)
+	// 	} else {
+	// 		fmt.Println("Primary:", server.Primary)
+	// 	}
 	// }
 
-	slogger, cleanup := logger.SetupLogger(config.Logging.File, config.Logging.Level, config.Server.Production)
+	var myConfig config.ServerConfig
+	for _, server := range cfg.Servers {
+		if server.ID == *serverId {
+			myConfig = server
+			break
+		}
+	}
+
+	if myConfig.ID == "" {
+		fmt.Println("No configuration found for this server")
+		os.Exit(1)
+	}
+
+	// Print info
+	fmt.Printf("Server ID: %s\nAddress: %s\nRole: %s\n", myConfig.ID, myConfig.Address, myConfig.Role)
+	if myConfig.Role == "primary" {
+		fmt.Println("Secondaries:", myConfig.Secondaries)
+	} else {
+		fmt.Println("Primary:", myConfig.Primary)
+	}
+
+	fmt.Println("\nCommon Server Settings")
+
+	fmt.Printf("Production flag: %v\nMax_Size of cache: %d\nEviction_Policy: %s\n\n", cfg.Common.Production, cfg.Common.MaxSize, cfg.Common.EvictionPolicy)
+
+	// Checks for proper config
+	if cfg.Common.MaxSize < 1 {
+		fmt.Println("Max Size of Cache cannot be less than 1")
+		os.Exit(1)
+	}
+
+	slogger, cleanup := logger.SetupLogger(cfg.Logging.File, cfg.Logging.Level, cfg.Common.Production)
 
 	defer cleanup()
 
-	localCache, err := cache.NewCache(config.Server.EvictionPolicy, config.Server.MaxSize)
+	localCache, err := cache.NewCache(cfg.Common.EvictionPolicy, cfg.Common.MaxSize)
 
 	if err != nil {
 
@@ -38,7 +77,7 @@ func main() {
 
 	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", config.Server.Address, config.Server.Port))
+	listener, err := net.Listen("tcp", myConfig.Address)
 	if err != nil {
 		fmt.Println("Failed to start server: " + err.Error())
 		os.Exit(1)
@@ -46,7 +85,7 @@ func main() {
 
 	defer listener.Close()
 
-	slogger.Info("Server is running on " + fmt.Sprintf("%s:%s", config.Server.Address, config.Server.Port))
+	slogger.Info("Server is running on " + myConfig.Address)
 
 	// handle signals for gracefull shutdown
 	stopChan := make(chan os.Signal, 1)

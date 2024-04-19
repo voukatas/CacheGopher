@@ -1,16 +1,23 @@
 package config
 
 type Configuration struct {
-	Server  ServerConfig  `json:"server"`
-	Logging LoggingConfig `json:"logging"`
+	Common  Common         `json:"common"`
+	Servers []ServerConfig `json:"servers"`
+	Logging LoggingConfig  `json:"logging"`
 }
 
-type ServerConfig struct {
-	Address        string `json:"address"`
-	Port           string `json:"port"`
+type Common struct {
 	Production     bool   `json:"production"`
 	MaxSize        int    `json:"max_size"`
 	EvictionPolicy string `json:"eviction_policy"`
+}
+
+type ServerConfig struct {
+	ID          string   `json:"id"`
+	Address     string   `json:"address"`
+	Role        string   `json:"role"`
+	Secondaries []string `json:"secondaries,omitempty"`
+	Primary     string   `json:"primary,omitempty"`
 }
 
 type LoggingConfig struct {

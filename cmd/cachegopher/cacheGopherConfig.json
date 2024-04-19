@@ -1,14 +1,31 @@
 {
-    "server": {
-	"address": "localhost",
-        "port": "31337",
+"common": {
 	"production": false,
 	"max_size": 10000,
-        "eviction_policy": "LRU"
-
+	"eviction_policy": "LRU"
+},
+  "servers": [
+    {
+      "id": "server1",
+      "address": "localhost:31337",
+      "role": "primary",
+      "secondaries": ["server2", "server3"]	  	  
     },
-    "logging": {
-        "level": "debug",
-        "file": "cacheGopherServer.log"
+    {
+      "id": "server2",
+      "address": "localhost:31338",
+      "role": "secondary",
+      "primary": "server1"
+    },
+    {
+      "id": "server3",
+      "address": "localhost:31339",
+      "role": "secondary",
+      "primary": "server1"
     }
+  ],
+  "logging": {
+    "level": "debug",
+    "file": "cacheGopherServer.log"
+  }
 }
