@@ -10,6 +10,7 @@ import (
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
 	"github.com/voukatas/CacheGopher/pkg/logger"
+	"github.com/voukatas/CacheGopher/pkg/server"
 )
 
 func TestMain(m *testing.M) {
@@ -26,6 +27,8 @@ func startTestServer(t *testing.T) (*net.Listener, error) {
 		fmt.Println("failed to start cache: ", err.Error())
 		os.Exit(1)
 	}
+	// Create server
+	server := server.NewServer(localCache, tlogger)
 
 	listener, err := net.Listen("tcp", "localhost:12345")
 	if err != nil {
@@ -41,7 +44,7 @@ func startTestServer(t *testing.T) (*net.Listener, error) {
 				t.Log("Server stopped accepting connections")
 				return
 			}
-			go cache.HandleConnection(conn, localCache, tlogger)
+			go server.HandleConnection(conn)
 		}
 	}()
 

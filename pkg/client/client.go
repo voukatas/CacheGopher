@@ -217,7 +217,7 @@ func validateCommand(cmdBytes []byte) error {
 	return nil
 }
 
-func sendCommand(c *Client, cmd string) (string, error) {
+func (c *Client) sendCommand(cmd string) (string, error) {
 
 	cmdBytes := []byte(cmd + "\n")
 
@@ -273,7 +273,7 @@ func (c *Client) Set(k, v string) (string, error) {
 	// c.lock.Lock()
 	// defer c.lock.Unlock()
 	cmd := fmt.Sprintf("SET %s %s", k, v)
-	resp, err := sendCommand(c, cmd)
+	resp, err := c.sendCommand(cmd)
 
 	return resp, err
 }
@@ -282,7 +282,7 @@ func (c *Client) Get(k string) (string, error) {
 	// c.lock.RLock()
 	// defer c.lock.RUnlock()
 	cmd := fmt.Sprintf("GET %s", k)
-	res, err := sendCommand(c, cmd)
+	res, err := c.sendCommand(cmd)
 
 	return res, err
 
@@ -290,7 +290,7 @@ func (c *Client) Get(k string) (string, error) {
 
 func (c *Client) Ping() (string, error) {
 
-	res, err := sendCommand(c, "PING")
+	res, err := c.sendCommand("PING")
 
 	return res, err
 
@@ -298,7 +298,7 @@ func (c *Client) Ping() (string, error) {
 
 func (c *Client) Delete(k string) (string, error) {
 	cmd := fmt.Sprintf("DELETE %s", k)
-	res, err := sendCommand(c, cmd)
+	res, err := c.sendCommand(cmd)
 
 	return res, err
 

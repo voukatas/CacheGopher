@@ -11,6 +11,7 @@ import (
 	"github.com/voukatas/CacheGopher/pkg/cache"
 	"github.com/voukatas/CacheGopher/pkg/config"
 	"github.com/voukatas/CacheGopher/pkg/logger"
+	"github.com/voukatas/CacheGopher/pkg/server"
 )
 
 func main() {
@@ -77,6 +78,9 @@ func main() {
 
 	}
 
+	// Create server
+	server := server.NewServer(localCache, slogger)
+
 	listener, err := net.Listen("tcp", myConfig.Address)
 	if err != nil {
 		fmt.Println("Failed to start server: " + err.Error())
@@ -113,7 +117,7 @@ func main() {
 				}
 				continue
 			}
-			go cache.HandleConnection(conn, localCache, slogger)
+			go server.HandleConnection(conn)
 		}
 	}()
 
