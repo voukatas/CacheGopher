@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"net"
 	"testing"
+
+	"github.com/voukatas/CacheGopher/pkg/replication"
 )
 
 type MockCache struct {
@@ -50,7 +52,8 @@ func (m *MockLogger) Error(msg string) { m.ErrorMessages = append(m.ErrorMessage
 func TestHandleConnection(t *testing.T) {
 	mockCache := &MockCache{}
 	mockLogger := &MockLogger{}
-	server := NewServer(mockCache, mockLogger)
+	mockReplicator := &replication.MockReplicator{}
+	server := NewServer(mockCache, mockLogger, mockReplicator)
 
 	// start a network pipe that is like having real network connections
 	clientConn, serverConn := net.Pipe()

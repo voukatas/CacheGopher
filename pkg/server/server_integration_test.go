@@ -8,6 +8,7 @@ import (
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
 	"github.com/voukatas/CacheGopher/pkg/logger"
+	"github.com/voukatas/CacheGopher/pkg/replication"
 )
 
 // func TestServerIntegration(t *testing.T) {
@@ -44,7 +45,9 @@ func TestServerIntegration(t *testing.T) {
 		t.Fatalf("Failed to create cache: %v", err)
 	}
 
-	myServer := NewServer(localCache, logger)
+	mockReplicator := &replication.MockReplicator{}
+
+	myServer := NewServer(localCache, logger, mockReplicator)
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Failed to listen on TCP port: %v", err)
