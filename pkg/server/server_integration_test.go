@@ -11,33 +11,6 @@ import (
 	"github.com/voukatas/CacheGopher/pkg/replication"
 )
 
-// func TestServerIntegration(t *testing.T) {
-//
-// 	logger := logger.SetupDebugLogger()
-// 	localCache, _ := cache.NewCache("LRU", 10)
-//
-// 	myServer := NewServer(localCache, logger)
-// 	listener, _ := net.Listen("tcp", "localhost:0")
-//
-// 	defer listener.Close()
-//
-// 	go func() {
-// 		conn, _ := listener.Accept()
-// 		myServer.HandleConnection(conn)
-// 	}()
-//
-// 	clientConn, _ := net.Dial("tcp", listener.Addr().String())
-// 	defer clientConn.Close()
-//
-// 	fmt.Fprintf(clientConn, "SET myKey myValue\n")
-// 	reader := bufio.NewReader(clientConn)
-// 	res, _, _ := reader.ReadLine()
-// 	if string(res) != "OK" {
-// 		t.Fatalf(`res= %s; want %s`, res, "OK\\n")
-// 	}
-//
-// }
-
 func TestServerIntegration(t *testing.T) {
 	logger := logger.SetupDebugLogger()
 	localCache, err := cache.NewCache("LRU", 10)
