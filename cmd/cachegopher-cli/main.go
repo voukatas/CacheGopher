@@ -11,8 +11,8 @@ func main() {
 
 	clog := logger.SetupDebugLogger()
 
-	newPool := client.NewConnPool(3, "localhost:31337")
-	newClient, err := client.NewClient(newPool, false)
+	//newPool := client.NewConnPool(3, "localhost:31337")
+	newClient, err := client.NewClient(true)
 
 	if err != nil {
 

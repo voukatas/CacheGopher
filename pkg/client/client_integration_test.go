@@ -15,14 +15,29 @@ func TestRealServerInteraction(t *testing.T) {
 	defer (*listener).Close()
 
 	// setup client
-	pool := NewConnPool(1, "localhost:12345")
-	client, err := NewClient(pool, true)
-	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
-	}
+	// pool := NewConnPool(1, "localhost:12345")
+	// client, err := NewClient(pool, true)
+	// if err != nil {
+	// 	t.Fatalf("Failed to create client: %v", err)
+	// }
 
+	pool := NewConnPool(1, "localhost:12345")
+	newNode := NewCacheNode("testNode", true, pool)
+
+	ring := NewHashRing()
+	balancers := map[string]*ReadBalancer{}
+
+	ring.AddNode(newNode)
+	newBalancer := NewReadBalancer()
+	newBalancer.addCacheNode(newNode)
+	balancers["testNode"] = newBalancer
+
+	client := &Client{
+		ring:      ring,
+		balancers: balancers,
+	}
 	// Test Ping
-	if resp, err := client.Ping(); err != nil || resp != "PONG" {
+	if resp, err := client.Ping(newNode); err != nil || resp != "PONG" {
 		t.Errorf("Ping failed: resp=%s, err=%v", resp, err)
 	}
 

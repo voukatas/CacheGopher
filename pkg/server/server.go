@@ -58,7 +58,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			v, ok := s.cache.Get(cmd[1])
 			if !ok {
 				fmt.Fprintf(conn, "ERROR: Key not found\n")
-				s.logger.Debug("ERROR: Key not found")
+				s.logger.Debug("ERROR: Key not found: " + cmd[1])
 				continue
 			}
 			fmt.Fprintf(conn, "%s\n", v)

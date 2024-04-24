@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/voukatas/CacheGopher/pkg/config"
 	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
@@ -55,11 +57,15 @@ type ReadBalancer struct {
 	lock  sync.Mutex
 }
 
-func NewReadBalancer(nodes []*CacheNode) *ReadBalancer {
+func NewReadBalancer() *ReadBalancer {
 	return &ReadBalancer{
-		nodes: nodes,
+		nodes: make([]*CacheNode, 0),
 		index: 0,
 	}
+}
+
+func (rb *ReadBalancer) addCacheNode(node *CacheNode) {
+	rb.nodes = append(rb.nodes, node)
 }
 
 func (rb *ReadBalancer) getNextCacheNode() *CacheNode {
@@ -68,6 +74,7 @@ func (rb *ReadBalancer) getNextCacheNode() *CacheNode {
 
 	total := len(rb.nodes)
 	if total == 1 {
+		// return the primary, hopefully it is not empty
 		return rb.nodes[0]
 	}
 
@@ -196,9 +203,9 @@ func (cp *ConnPool) Return(poolConn *PoolConn) error {
 }
 
 type Client struct {
-	pool *ConnPool
-	ring HashRing
-	//clusterMap map[string]ReadBalancer
+	//pool *ConnPool
+	ring      HashRing
+	balancers map[string]*ReadBalancer
 
 	//logger logger.Logger
 	// conn    net.Conn
@@ -206,12 +213,42 @@ type Client struct {
 	// lock    sync.RWMutex
 }
 
-func NewClient(pool *ConnPool, enableLogging bool) (*Client, error) {
+func NewClient(enableLogging bool) (*Client, error) {
 	// conn, err := net.Dial("tcp", address)
 	//
 	// if err != nil {
 	// 	return nil, err
 	// }
+	cfg, err := config.LoadConfig("cacheGopherConfig.json")
+	if err != nil {
+		fmt.Println("Failed to read configuration: " + err.Error())
+		return nil, fmt.Errorf("Failed to read configuration: " + err.Error())
+	}
+
+	ring := NewHashRing()
+	balancers := map[string]*ReadBalancer{}
+
+	for _, node := range cfg.Servers {
+
+		newPool := NewConnPool(5, node.Address)
+
+		if strings.ToUpper(node.Role) == "PRIMARY" {
+			newNode := NewCacheNode(node.ID, true, newPool)
+
+			ring.AddNode(newNode)
+			newBalancer := NewReadBalancer()
+			newBalancer.addCacheNode(newNode)
+			balancers[node.ID] = newBalancer
+		} else if strings.ToUpper(node.Role) == "SECONDARY" {
+			newNode := NewCacheNode(node.ID, false, newPool)
+
+			readBalancer := balancers[node.Primary]
+			readBalancer.addCacheNode(newNode)
+
+		} else {
+			return nil, fmt.Errorf("Unknown role: %s", node.Role)
+		}
+	}
 
 	if enableLogging {
 
@@ -220,7 +257,9 @@ func NewClient(pool *ConnPool, enableLogging bool) (*Client, error) {
 	}
 
 	return &Client{
-		pool: pool,
+		ring:      ring,
+		balancers: balancers,
+		//pool: pool,
 		//logger: libLogger,
 		// conn:    conn,
 		// scanner: bufio.NewScanner(conn),
@@ -249,7 +288,7 @@ func validateCommand(cmdBytes []byte) error {
 	return nil
 }
 
-func (c *Client) sendCommand(cmd string) (string, error) {
+func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 
 	cmdBytes := []byte(cmd + "\n")
 
@@ -265,7 +304,7 @@ func (c *Client) sendCommand(cmd string) (string, error) {
 	var err error
 
 	for attempts > 0 {
-		poolConn, err = c.pool.Get()
+		poolConn, err = node.ConnPool.Get()
 		if err != nil {
 			return "", err
 		}
@@ -285,7 +324,7 @@ func (c *Client) sendCommand(cmd string) (string, error) {
 
 		break
 	}
-	defer c.pool.Return(poolConn)
+	defer node.ConnPool.Return(poolConn)
 
 	//poolConn.scanner = bufio.NewScanner(poolConn.conn)
 
@@ -305,7 +344,11 @@ func (c *Client) Set(k, v string) (string, error) {
 	// c.lock.Lock()
 	// defer c.lock.Unlock()
 	cmd := fmt.Sprintf("SET %s %s", k, v)
-	resp, err := c.sendCommand(cmd)
+	primaryNode, err := c.ring.GetNode(k)
+	if err != nil {
+		return "", err
+	}
+	resp, err := c.sendCommand(primaryNode, cmd)
 
 	return resp, err
 }
@@ -314,15 +357,23 @@ func (c *Client) Get(k string) (string, error) {
 	// c.lock.RLock()
 	// defer c.lock.RUnlock()
 	cmd := fmt.Sprintf("GET %s", k)
-	res, err := c.sendCommand(cmd)
+	primaryNode, err := c.ring.GetNode(k)
+	if err != nil {
+		return "", err
+	}
 
-	return res, err
+	balancer := c.balancers[primaryNode.ID]
+	node := balancer.getNextCacheNode()
+	getLogger().Debug("node selected to send the request: " + node.ID)
+	resp, err := c.sendCommand(node, cmd)
+
+	return resp, err
 
 }
 
-func (c *Client) Ping() (string, error) {
+func (c *Client) Ping(node *CacheNode) (string, error) {
 
-	res, err := c.sendCommand("PING")
+	res, err := c.sendCommand(node, "PING")
 
 	return res, err
 
@@ -330,7 +381,11 @@ func (c *Client) Ping() (string, error) {
 
 func (c *Client) Delete(k string) (string, error) {
 	cmd := fmt.Sprintf("DELETE %s", k)
-	res, err := c.sendCommand(cmd)
+	primaryNode, err := c.ring.GetNode(k)
+	if err != nil {
+		return "", err
+	}
+	res, err := c.sendCommand(primaryNode, cmd)
 
 	return res, err
 

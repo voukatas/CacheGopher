@@ -51,13 +51,28 @@ func TestClient(t *testing.T) {
 	time.Sleep(time.Second)
 
 	pool := NewConnPool(1, "localhost:3333")
-	client, err := NewClient(pool, true)
-	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
+	newNode := NewCacheNode("testNode", true, pool)
+
+	ring := NewHashRing()
+	balancers := map[string]*ReadBalancer{}
+
+	ring.AddNode(newNode)
+	newBalancer := NewReadBalancer()
+	newBalancer.addCacheNode(newNode)
+	balancers["testNode"] = newBalancer
+
+	client := &Client{
+		ring:      ring,
+		balancers: balancers,
 	}
 
+	//client, err := NewClient(true)
+	// if err != nil {
+	// 	t.Fatalf("Failed to create client: %v", err)
+	// }
+
 	// Test Ping
-	if resp, err := client.Ping(); err != nil || resp != "PONG" {
+	if resp, err := client.Ping(newNode); err != nil || resp != "PONG" {
 		t.Errorf("Ping failed: resp=%s, err=%v", resp, err)
 	}
 
