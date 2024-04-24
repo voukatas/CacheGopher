@@ -168,6 +168,9 @@ func (cp *ConnPool) Return(poolConn *PoolConn) error {
 
 type Client struct {
 	pool *ConnPool
+	ring HashRing
+	//clusterMap map[string]ReadBalancer
+
 	//logger logger.Logger
 	// conn    net.Conn
 	// scanner *bufio.Scanner

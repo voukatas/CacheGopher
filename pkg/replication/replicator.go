@@ -18,7 +18,7 @@ func (mr *MockReplicator) AddWriteEvent(we WriteEvent) {
 }
 
 type ReplicationService interface {
-	AddWriteEvent(we WriteEvent)
+	AddWriteEvent(WriteEvent)
 }
 
 type ReplConn struct {
