@@ -82,7 +82,7 @@ func (s *SimpleHashRing) GetNode(key string) (*CacheNode, error) {
 
 	hash := sha1.New()
 	hash.Write([]byte(key))
-	// common practice to use 32-bit, also perform faster in calculations
+	// common practice to use 32-bit, also performs faster in calculations
 	keyHash := binary.BigEndian.Uint32(hash.Sum(nil)[:4])
 
 	// O(n) time complexity

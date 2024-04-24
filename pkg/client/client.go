@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/voukatas/CacheGopher/pkg/logger"
@@ -46,6 +47,34 @@ type ConnPool struct {
 	pool    chan *PoolConn
 	address string
 	// size    int
+}
+
+type ReadBalancer struct {
+	nodes []*CacheNode
+	index int
+	lock  sync.Mutex
+}
+
+func NewReadBalancer(nodes []*CacheNode) *ReadBalancer {
+	return &ReadBalancer{
+		nodes: nodes,
+		index: 0,
+	}
+}
+
+func (rb *ReadBalancer) getNextCacheNode() *CacheNode {
+	rb.lock.Lock()
+	defer rb.lock.Unlock()
+
+	total := len(rb.nodes)
+	if total == 1 {
+		return rb.nodes[0]
+	}
+
+	node := rb.nodes[rb.index%total]
+	rb.index++
+
+	return node
 }
 
 func (pc *PoolConn) isExpired() bool {
