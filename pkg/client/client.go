@@ -330,6 +330,9 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 
 	if poolConn.scanner.Scan() {
 		getLogger().Debug("Data from read: " + poolConn.scanner.Text())
+		if strings.Contains(poolConn.scanner.Text(), "ERROR:") {
+			return "", fmt.Errorf(poolConn.scanner.Text())
+		}
 		return poolConn.scanner.Text(), nil
 	}
 

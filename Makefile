@@ -15,4 +15,7 @@ build_cli:
 clean:
 	rm -f $(BIN_DIR)/server $(BIN_DIR)/gopher-cli $(BIN_DIR)/cacheGopherConfig.json
 
-.PHONY: build_server build_cli
+test:
+	go test -v -race -cover ./...
+
+.PHONY: build_server build_cli test

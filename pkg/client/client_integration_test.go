@@ -56,7 +56,7 @@ func TestRealServerInteraction(t *testing.T) {
 		t.Errorf("Delete failed: resp=%s, err=%v", resp, err)
 	}
 
-	if resp, err := client.Get("testkey"); err != nil || !strings.Contains(resp, "Key not found") {
+	if resp, err := client.Get("testkey"); err == nil || !strings.Contains(err.Error(), "Key not found") {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
 

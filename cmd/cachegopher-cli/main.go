@@ -12,7 +12,7 @@ func main() {
 	clog := logger.SetupDebugLogger()
 
 	//newPool := client.NewConnPool(3, "localhost:31337")
-	newClient, err := client.NewClient(true)
+	newClient, err := client.NewClient(false)
 
 	if err != nil {
 
@@ -34,7 +34,7 @@ func main() {
 	resp, err = newClient.Get("testKey")
 	if err != nil {
 
-		clog.Debug("failed to GET key, error" + "error" + err.Error())
+		clog.Debug("failed to GET key," + "error " + err.Error())
 	} else {
 
 		clog.Debug("Response from cache server" + "resp" + resp)
@@ -52,7 +52,7 @@ func main() {
 	resp, err = newClient.Get("testKey")
 	if err != nil {
 
-		clog.Debug("failed to GET key, error" + "error" + err.Error())
+		clog.Debug("failed to GET key, " + "error " + err.Error())
 	} else {
 
 		clog.Debug("Response from cache server" + "resp" + resp)
