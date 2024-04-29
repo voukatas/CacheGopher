@@ -13,18 +13,21 @@ import (
 )
 
 type Server struct {
-	cache      cache.Cache
-	logger     logger.Logger
-	replicator replication.ReplicationService
-	isPrimary  bool
+	cache          cache.Cache
+	logger         logger.Logger
+	replicator     replication.ReplicationService
+	isPrimary      bool
+	primaryAddress string
 	// logEvent LogEvent
 }
 
-func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.ReplicationService) *Server {
+func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.ReplicationService, isPrimary bool, primaryAddress string) *Server {
 	return &Server{
-		cache:      cache,
-		logger:     logger,
-		replicator: replicator,
+		cache:          cache,
+		logger:         logger,
+		replicator:     replicator,
+		isPrimary:      isPrimary,
+		primaryAddress: primaryAddress,
 	}
 }
 
@@ -43,6 +46,19 @@ func (s *Server) SendCurrentState(conn net.Conn) {
 func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
 
 	if !s.replicator.IsPrimary() {
+		conn, err := net.Dial("tcp", s.primaryAddress)
+		if err != nil {
+
+			return fmt.Errorf("failed to connect to primary, recovery failed")
+		}
+
+		defer conn.Close()
+		scanner := bufio.NewScanner(conn)
+		replConn := &replication.ReplConn{Conn: conn, Scanner: scanner}
+		err = s.startRecovery(replConn)
+		if err != nil {
+			return fmt.Errorf("failed to recover")
+		}
 
 	} else {
 

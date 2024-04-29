@@ -30,7 +30,7 @@ func startTestServer(t *testing.T) (*net.Listener, error) {
 	}
 	mockReplicator := &replication.MockReplicator{}
 	// Create myServer
-	myServer := server.NewServer(localCache, tlogger, mockReplicator)
+	myServer := server.NewServer(localCache, tlogger, mockReplicator, false, "")
 
 	listener, err := net.Listen("tcp", "localhost:12345")
 	if err != nil {

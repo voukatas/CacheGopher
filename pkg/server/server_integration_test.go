@@ -20,7 +20,7 @@ func TestServerIntegration(t *testing.T) {
 
 	mockReplicator := &replication.MockReplicator{}
 
-	myServer := NewServer(localCache, logger, mockReplicator)
+	myServer := NewServer(localCache, logger, mockReplicator, false, "")
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Failed to listen on TCP port: %v", err)

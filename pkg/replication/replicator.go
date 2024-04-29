@@ -56,6 +56,7 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 	isPrimary := false
 
 	for _, server := range cfg.Servers {
+		// open connections to all the secondary servers
 		if currentServerId == server.Primary {
 			isPrimary = true
 			conn, err := establishConnection(server.Address)
@@ -66,6 +67,8 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 			secondariesConfig = append(secondariesConfig, server)
 		}
 	}
+
+	// i should refactor this for the case that is not primary, no need to keep the references and waste resources
 
 	rep := &Replicator{
 		//secondaries: secondaries,

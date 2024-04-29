@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
@@ -53,10 +54,20 @@ func main() {
 
 	// Print info
 	fmt.Printf("Server ID: %s\nAddress: %s\nRole: %s\n", myConfig.ID, myConfig.Address, myConfig.Role)
-	if myConfig.Role == "primary" {
+
+	primaryAddress := ""
+	isPrimary := strings.ToUpper(myConfig.Role) == "PRIMARY"
+	if strings.ToUpper(myConfig.Role) == "PRIMARY" {
 		fmt.Println("Secondaries:", myConfig.Secondaries)
 	} else {
-		fmt.Println("Primary:", myConfig.Primary)
+		primaryAddress, err = config.GetPrimaryServerAddress(cfg, myConfig.Primary)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		fmt.Println("Primary serverId:", myConfig.Primary)
+		fmt.Println("Primary address:", primaryAddress)
 	}
 
 	fmt.Println("\nCommon Server Settings")
@@ -90,7 +101,7 @@ func main() {
 	}
 
 	// Create cacheServer
-	cacheServer := server.NewServer(localCache, slogger, replicator)
+	cacheServer := server.NewServer(localCache, slogger, replicator, isPrimary, primaryAddress)
 
 	if *recover {
 		fmt.Println("Recovery mode enabled")

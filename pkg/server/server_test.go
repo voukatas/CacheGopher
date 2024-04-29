@@ -56,7 +56,7 @@ func TestHandleConnection(t *testing.T) {
 	mockCache := &MockCache{}
 	mockLogger := &MockLogger{}
 	mockReplicator := &replication.MockReplicator{}
-	server := NewServer(mockCache, mockLogger, mockReplicator)
+	server := NewServer(mockCache, mockLogger, mockReplicator, false, "")
 
 	// start a network pipe that is like having real network connections
 	clientConn, serverConn := net.Pipe()
