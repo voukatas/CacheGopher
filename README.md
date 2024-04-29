@@ -222,6 +222,7 @@ go test -bench=BenchmarkCacheSet
 ## Future Enhancements
 - More tests (there are never enough as always :) )
 - Improve the protocol, especially on error communication
+- Automatically rotate to the next server in case the client fails to receive an answer
 - Add configuration option for the connection pools
 - Add configuration option for the retries in client
 - Add configuration option for the retries in server

@@ -18,6 +18,9 @@ import (
 func main() {
 
 	serverId := flag.String("server-id", "", "Unique Identifier for the server")
+
+	recover := flag.Bool("recover", false, "Enable recovery mode")
+
 	flag.Parse()
 
 	cfg, err := config.LoadConfig("cacheGopherConfig.json")
@@ -88,6 +91,12 @@ func main() {
 
 	// Create cacheServer
 	cacheServer := server.NewServer(localCache, slogger, replicator)
+
+	if *recover {
+		fmt.Println("Recovery mode enabled")
+		cacheServer.HandleRecovery(myConfig)
+		fmt.Println("Recovery mode ended")
+	}
 
 	listener, err := net.Listen("tcp", myConfig.Address)
 	if err != nil {

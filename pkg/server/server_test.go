@@ -38,6 +38,9 @@ func (m *MockCache) Keys() []string {
 	m.KeysCalled = true
 	return []string{"key1", "key2"}
 }
+func (m *MockCache) GetAll() map[string]string {
+	return map[string]string{}
+}
 
 type MockLogger struct {
 	DebugMessages []string

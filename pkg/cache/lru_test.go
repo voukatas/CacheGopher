@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -118,4 +119,56 @@ func TestLRUConcurrency(t *testing.T) {
 
 	wg.Wait()
 
+}
+
+func TestGetAllEmptyCache(t *testing.T) {
+	lru := NewTestLRUCache(2)
+	res := lru.GetAll()
+	if len(res) != 0 {
+		t.Errorf("Expected empty map, got %v", res)
+	}
+}
+
+func TestGetAllPartiallyFilledCache(t *testing.T) {
+	lru := NewTestLRUCache(5)
+	lru.Set("a", "a")
+	lru.Set("b", "b")
+	expected := map[string]string{"a": "a", "b": "b"}
+	result := lru.GetAll()
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected map %v, got %v", expected, result)
+	}
+}
+
+func TestGetAllFullCacheWithEvictions(t *testing.T) {
+	lru := NewTestLRUCache(2)
+	lru.Set("a", "a")
+	lru.Set("b", "b")
+	lru.Set("c", "c") // This should evict a
+	expected := map[string]string{"b": "b", "c": "c"}
+	result := lru.GetAll()
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected map %v, got %v", expected, result)
+	}
+}
+
+func TestGetAllConcurrency(t *testing.T) {
+	lru := NewTestLRUCache(10)
+	actions := 1000
+	var wg sync.WaitGroup
+	wg.Add(actions)
+	for i := 0; i < actions; i++ {
+		go func(i int) {
+			defer wg.Done()
+			key := string("key_" + strconv.Itoa(i%10))
+			value := "value_" + strconv.Itoa(i)
+			lru.Set(key, value)
+		}(i)
+	}
+	wg.Wait()
+
+	result := lru.GetAll()
+	if len(result) != 10 {
+		t.Errorf("Expected 10 entries in the map, got %d", len(result))
+	}
 }

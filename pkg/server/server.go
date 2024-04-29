@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
+	"github.com/voukatas/CacheGopher/pkg/config"
 	"github.com/voukatas/CacheGopher/pkg/logger"
 	"github.com/voukatas/CacheGopher/pkg/replication"
 )
@@ -15,6 +16,8 @@ type Server struct {
 	cache      cache.Cache
 	logger     logger.Logger
 	replicator replication.ReplicationService
+	isPrimary  bool
+	// logEvent LogEvent
 }
 
 func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.ReplicationService) *Server {
@@ -23,6 +26,74 @@ func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.R
 		logger:     logger,
 		replicator: replicator,
 	}
+}
+
+func (s *Server) SendCurrentState(conn net.Conn) {
+	s.logger.Debug("Sending current state")
+
+	data := s.cache.GetAll()
+	for k, v := range data {
+		fmt.Fprintf(conn, "%s %s\n", k, v)
+		s.logger.Debug("Key: " + k + "Value: " + v + "\n")
+
+	}
+
+}
+
+func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
+
+	if !s.replicator.IsPrimary() {
+
+	} else {
+
+		for _, serverId := range myConfig.Secondaries {
+			fmt.Println("\n", serverId)
+			replConn, err := s.replicator.GetSecondaryConn(serverId)
+			//conn, err := net.Dial("tcp", "localhost:31338")
+			if err != nil {
+				s.logger.Error(err.Error())
+				continue
+			}
+			//defer conn.Close()
+
+			err = s.startRecovery(replConn)
+			if err != nil {
+				return fmt.Errorf("failed to recover")
+			}
+
+			// if we reach here then there is no need to continue with the rest servers
+
+			return nil
+		}
+	}
+
+	return nil
+
+}
+
+func (s *Server) startRecovery(replConn *replication.ReplConn) error {
+	s.logger.Debug("Initiating recovery process")
+	fmt.Fprintf(replConn.Conn, "RECOVER\n")
+	//scanner := bufio.NewScanner(replConn.Scanner)
+	for replConn.Scanner.Scan() {
+		s.logger.Debug("Line: " + replConn.Scanner.Text())
+		if replConn.Scanner.Text() == "RECOVEREND" {
+			break
+		}
+		parts := strings.SplitN(replConn.Scanner.Text(), " ", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("failed to parse recover key value")
+		}
+
+		s.cache.Set(parts[0], parts[1])
+	}
+
+	if err := replConn.Scanner.Err(); err != nil {
+		return fmt.Errorf("failed, errors during reading data")
+
+	}
+
+	return nil
 }
 
 func (s *Server) HandleConnection(conn net.Conn) {
@@ -111,6 +182,21 @@ func (s *Server) HandleConnection(conn net.Conn) {
 
 			fmt.Fprintf(conn, "PONG\n")
 			s.logger.Debug("PONG")
+		case "RECOVER":
+			s.logger.Debug("RECOVER")
+			// get the lock for write to block any write operation and start keeping in memory the write changes in a log slice
+			s.SendCurrentState(conn)
+
+			// lock in read mode and send all the current keys
+
+			// lock in write mode to send all the remaining keys if it is the primary server
+			if s.replicator.IsPrimary() {
+				s.logger.Debug("IsPrimary true")
+			} else {
+				s.logger.Debug("Not a primary node")
+			}
+			fmt.Fprintf(conn, "RECOVEREND\n")
+			//return
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")

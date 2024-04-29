@@ -16,14 +16,22 @@ type MockReplicator struct{}
 
 func (mr *MockReplicator) AddWriteEvent(we WriteEvent) {
 }
+func (mr *MockReplicator) IsPrimary() bool {
+	return true
+}
+func (mr *MockReplicator) GetSecondaryConn(id string) (*ReplConn, error) {
+	return nil, nil
+}
 
 type ReplicationService interface {
 	AddWriteEvent(WriteEvent)
+	IsPrimary() bool
+	GetSecondaryConn(string) (*ReplConn, error)
 }
 
 type ReplConn struct {
-	conn    net.Conn
-	scanner *bufio.Scanner
+	Conn    net.Conn
+	Scanner *bufio.Scanner
 }
 
 type WriteEvent struct {
@@ -37,6 +45,7 @@ type Replicator struct {
 	secondaries []config.ServerConfig
 	writeCh     chan WriteEvent
 	logger      logger.Logger
+	isPrimary   bool
 }
 
 func NewReplicator(currentServerId string, cfg *config.Configuration, logger logger.Logger) (*Replicator, error) {
@@ -44,9 +53,11 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 	connMap := make(map[string]*ReplConn)
 	secondariesConfig := make([]config.ServerConfig, 0)
 	writeCh := make(chan WriteEvent, 100)
+	isPrimary := false
 
 	for _, server := range cfg.Servers {
 		if currentServerId == server.Primary {
+			isPrimary = true
 			conn, err := establishConnection(server.Address)
 			if err != nil {
 				return nil, err
@@ -62,6 +73,7 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 		secondaries: secondariesConfig,
 		writeCh:     writeCh,
 		logger:      logger,
+		isPrimary:   isPrimary,
 	}
 
 	// Single goroutine to keep the order as much as possible
@@ -76,6 +88,18 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 	return rep, nil
 }
 
+func (rp *Replicator) GetSecondaryConn(id string) (*ReplConn, error) {
+	replConn, exists := rp.connMap[id]
+	if !exists {
+		return nil, fmt.Errorf("connection to server not found")
+	}
+	return replConn, nil
+}
+
+func (rp *Replicator) IsPrimary() bool {
+	return rp.isPrimary
+}
+
 func establishConnection(address string) (*ReplConn, error) {
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
@@ -83,7 +107,7 @@ func establishConnection(address string) (*ReplConn, error) {
 	}
 
 	scanner := bufio.NewScanner(conn)
-	return &ReplConn{conn: conn, scanner: scanner}, nil
+	return &ReplConn{Conn: conn, Scanner: scanner}, nil
 
 }
 
@@ -99,13 +123,13 @@ func (r *Replicator) checkResponse(conn *ReplConn) error {
 }
 
 func (rc *ReplConn) checkConnResp() error {
-	if rc.scanner.Scan() {
-		if rc.scanner.Text() != "OK" {
-			return fmt.Errorf("received: " + rc.scanner.Text() + " instead of OK")
+	if rc.Scanner.Scan() {
+		if rc.Scanner.Text() != "OK" {
+			return fmt.Errorf("received: " + rc.Scanner.Text() + " instead of OK")
 		}
 	}
 
-	if err := rc.scanner.Err(); err != nil {
+	if err := rc.Scanner.Err(); err != nil {
 		return err
 	}
 
@@ -127,7 +151,7 @@ func sendCommand(replConn *ReplConn, we WriteEvent) error {
 		cmd = fmt.Sprintf("%s %s\n", we.Cmd, we.Key)
 	}
 	//cmd = fmt.Sprintf("%s %s %s\n", we.Cmd, we.Key, we.Value)
-	_, err := replConn.conn.Write([]byte(cmd))
+	_, err := replConn.Conn.Write([]byte(cmd))
 	return err
 }
 
@@ -151,7 +175,7 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 		currentConn := replConn
 
 		if err != nil {
-			replConn.conn.Close()
+			replConn.Conn.Close()
 
 			newConn, err := reEstablishConnection(server.Address)
 			if err != nil {
@@ -165,7 +189,7 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 			err = sendCommand(newConn, we)
 
 			if err != nil {
-				newConn.conn.Close()
+				newConn.Conn.Close()
 				r.logger.Error(err.Error())
 				continue
 			}

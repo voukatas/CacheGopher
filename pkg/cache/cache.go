@@ -11,6 +11,7 @@ type Cache interface {
 	Delete(key string) bool
 	Flush()
 	Keys() []string
+	GetAll() map[string]string
 	// SetLogger(logger.Logger)
 	// GetLogger() logger.Logger
 }

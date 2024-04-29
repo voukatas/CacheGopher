@@ -30,8 +30,8 @@ type LRUCache struct {
 	capacity int
 	head     *CacheItem
 	tail     *CacheItem
-	lock     sync.Mutex
-	logger   logger.Logger
+	lock     sync.RWMutex
+	//logger   logger.Logger
 }
 
 func NewLRUCache(capacity int) Cache {
@@ -140,6 +140,20 @@ func (lru *LRUCache) Get(key string) (string, bool) {
 
 }
 
+// GetAll key-value records
+func (lru *LRUCache) GetAll() map[string]string {
+	lru.lock.RLock()
+	defer lru.lock.RUnlock()
+
+	keyValMap := make(map[string]string, 0)
+
+	for k, v := range lru.store {
+		keyValMap[k] = v.value
+	}
+
+	return keyValMap
+}
+
 // Delete
 func (lru *LRUCache) Delete(key string) bool {
 	lru.lock.Lock()
@@ -162,14 +176,15 @@ func (lru *LRUCache) Flush() {
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 
-	// This might prevent potential memory leaks but it will slow down signifigantly the performance. Tradeoffs... consider revisit this
-	// current := lru.head
-	// for current != nil {
-	// 	next := current.next
-	// 	current.prev = nil
-	// 	current.next = nil
-	// 	current = next
-	// }
+	// This might prevent potential memory leaks but it will slow down signifigantly the performance. Tradeoffs... consider a revisit on this
+	current := lru.head
+	for current != nil {
+		next := current.next
+		current.prev = nil
+		current.next = nil
+		current = next
+	}
+	// end of consideration
 
 	lru.store = make(map[string]*CacheItem) // Reinitialize the map
 	lru.head = nil
@@ -216,7 +231,7 @@ type LRUCache2 struct {
 	capacity int
 	store    map[string]*list.Element
 	queue    *list.List
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	logger   logger.Logger
 }
 
@@ -291,6 +306,21 @@ func (c *LRUCache2) Keys() []string {
 		keys = append(keys, key)
 	}
 	return keys
+}
+
+// GetAll key-value records
+func (lru *LRUCache2) GetAll() map[string]string {
+	lru.lock.RLock()
+	defer lru.lock.RUnlock()
+
+	keyValMap := make(map[string]string, 0)
+
+	for k, v := range lru.store {
+		keyValMap[k] = v.Value.(*entry).value
+
+	}
+
+	return keyValMap
 }
 
 // func (lru *LRUCache2) SetLogger(logger logger.Logger) {
