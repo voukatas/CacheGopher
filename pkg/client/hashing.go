@@ -49,6 +49,7 @@ func NewHashRing() HashRing {
 func (s *SimpleHashRing) AddNode(node *CacheNode) {
 	// s.lock.Lock()
 	// defer s.lock.Unlock()
+	//fmt.Println("node hash: ", node.Hash)
 
 	s.nodes = append(s.nodes, node)
 	sort.Slice(s.nodes, func(i, j int) bool {
@@ -84,6 +85,12 @@ func (s *SimpleHashRing) GetNode(key string) (*CacheNode, error) {
 	hash.Write([]byte(key))
 	// common practice to use 32-bit, also performs faster in calculations
 	keyHash := binary.BigEndian.Uint32(hash.Sum(nil)[:4])
+	// fmt.Println("keyHash  ", keyHash)
+	//
+	// for _, node := range s.nodes {
+	//
+	// 	fmt.Println("node id: ", node.ID)
+	// }
 
 	// O(n) time complexity
 	// for _, node := range s.nodes {
@@ -98,6 +105,7 @@ func (s *SimpleHashRing) GetNode(key string) (*CacheNode, error) {
 	})
 
 	if idx < len(s.nodes) {
+		//fmt.Println("node selected to send the request: ", s.nodes[idx])
 		return s.nodes[idx], nil
 	}
 

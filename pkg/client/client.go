@@ -130,7 +130,7 @@ func NewConnPool(size int, address string) *ConnPool {
 }
 
 func (cp *ConnPool) Get() (*PoolConn, error) {
-	getLogger().Debug("Get called")
+	getLogger().Debug("Get connection from pool called")
 
 	for {
 		select {
@@ -151,7 +151,7 @@ func (cp *ConnPool) Get() (*PoolConn, error) {
 }
 
 func (cp *ConnPool) dialWithBackOff() (*PoolConn, error) {
-	getLogger().Debug("dialWithBackOff")
+	getLogger().Debug(" dialWithBackOff")
 	maxAttempts := 3
 	baseTime := 100 * time.Millisecond
 	maxBackoff := 1 * time.Second
@@ -346,11 +346,13 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 func (c *Client) Set(k, v string) (string, error) {
 	// c.lock.Lock()
 	// defer c.lock.Unlock()
+	getLogger().Debug("SET " + k + " " + v)
 	cmd := fmt.Sprintf("SET %s %s", k, v)
 	primaryNode, err := c.ring.GetNode(k)
 	if err != nil {
 		return "", err
 	}
+	getLogger().Debug("node selected to send the request: " + primaryNode.ID)
 	resp, err := c.sendCommand(primaryNode, cmd)
 
 	return resp, err
@@ -359,6 +361,7 @@ func (c *Client) Set(k, v string) (string, error) {
 func (c *Client) Get(k string) (string, error) {
 	// c.lock.RLock()
 	// defer c.lock.RUnlock()
+	getLogger().Debug("GET " + k)
 	cmd := fmt.Sprintf("GET %s", k)
 	primaryNode, err := c.ring.GetNode(k)
 	if err != nil {
@@ -383,11 +386,13 @@ func (c *Client) Ping(node *CacheNode) (string, error) {
 }
 
 func (c *Client) Delete(k string) (string, error) {
+	getLogger().Debug("DELETE " + k)
 	cmd := fmt.Sprintf("DELETE %s", k)
 	primaryNode, err := c.ring.GetNode(k)
 	if err != nil {
 		return "", err
 	}
+	getLogger().Debug("node selected to send the request: " + primaryNode.ID)
 	res, err := c.sendCommand(primaryNode, cmd)
 
 	return res, err

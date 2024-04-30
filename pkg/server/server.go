@@ -63,6 +63,7 @@ func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
 	} else {
 
 		for _, serverId := range myConfig.Secondaries {
+			//fmt.Println("in here")
 			fmt.Println("\n", serverId)
 			replConn, err := s.replicator.GetSecondaryConn(serverId)
 			//conn, err := net.Dial("tcp", "localhost:31338")
@@ -211,6 +212,11 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			} else {
 				s.logger.Debug("Not a primary node")
 			}
+			// if s.isPrimary {
+			// 	s.logger.Debug("IsPrimary true")
+			// } else {
+			// 	s.logger.Debug("Not a primary node")
+			// }
 			fmt.Fprintf(conn, "RECOVEREND\n")
 			//return
 		case "EXIT":
