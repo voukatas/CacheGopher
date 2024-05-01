@@ -123,7 +123,7 @@ func TestLRUConcurrency(t *testing.T) {
 
 func TestGetAllEmptyCache(t *testing.T) {
 	lru := NewTestLRUCache(2)
-	res := lru.GetAll()
+	res := lru.GetSnapshot()
 	if len(res) != 0 {
 		t.Errorf("Expected empty map, got %v", res)
 	}
@@ -134,7 +134,7 @@ func TestGetAllPartiallyFilledCache(t *testing.T) {
 	lru.Set("a", "a")
 	lru.Set("b", "b")
 	expected := map[string]string{"a": "a", "b": "b"}
-	result := lru.GetAll()
+	result := lru.GetSnapshot()
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Expected map %v, got %v", expected, result)
 	}
@@ -146,7 +146,7 @@ func TestGetAllFullCacheWithEvictions(t *testing.T) {
 	lru.Set("b", "b")
 	lru.Set("c", "c") // This should evict a
 	expected := map[string]string{"b": "b", "c": "c"}
-	result := lru.GetAll()
+	result := lru.GetSnapshot()
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Expected map %v, got %v", expected, result)
 	}
@@ -167,7 +167,7 @@ func TestGetAllConcurrency(t *testing.T) {
 	}
 	wg.Wait()
 
-	result := lru.GetAll()
+	result := lru.GetSnapshot()
 	if len(result) != 10 {
 		t.Errorf("Expected 10 entries in the map, got %d", len(result))
 	}

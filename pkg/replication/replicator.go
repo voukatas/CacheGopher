@@ -59,12 +59,16 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 		// open connections to all the secondary servers
 		if currentServerId == server.Primary {
 			isPrimary = true
+
+			secondariesConfig = append(secondariesConfig, server)
+
 			conn, err := establishConnection(server.Address)
 			if err != nil {
-				return nil, err
+				logger.Error("failed to establish connection" + err.Error())
+				continue
+				// return nil, err
 			}
 			connMap[server.ID] = conn
-			secondariesConfig = append(secondariesConfig, server)
 		}
 	}
 
@@ -81,6 +85,7 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 
 	// Single goroutine to keep the order as much as possible
 	// Might be performance bottleneck though....
+	// In case this is replaced from multiple goroutines then I need to lock the connMap
 	go func() {
 		for we := range writeCh {
 
@@ -168,8 +173,17 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 	for _, server := range r.secondaries {
 		replConn, exists := r.connMap[server.ID]
 		if !exists {
-			r.logger.Error("failed to replicate, no connection to server: " + server.ID)
-			continue
+			conn, err := establishConnection(server.Address)
+			if err != nil {
+				r.logger.Error("failed to establish connection" + err.Error())
+				continue
+			}
+			r.connMap[server.ID] = conn
+
+			replConn = conn
+
+			// r.logger.Error("failed to replicate, no connection to server: " + server.ID)
+			// continue
 		}
 
 		// cmd := fmt.Sprintf("%s %s %s\n", we.cmd, we.key, we.value)

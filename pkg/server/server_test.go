@@ -38,8 +38,14 @@ func (m *MockCache) Keys() []string {
 	m.KeysCalled = true
 	return []string{"key1", "key2"}
 }
-func (m *MockCache) GetAll() map[string]string {
+func (m *MockCache) GetSnapshot() map[string]string {
 	return map[string]string{}
+}
+
+func (lru *MockCache) Lock() {
+}
+
+func (lru *MockCache) Unlock() {
 }
 
 type MockLogger struct {

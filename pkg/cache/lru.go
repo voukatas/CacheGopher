@@ -124,6 +124,14 @@ func (lru *LRUCache) Set(key string, value string) {
 
 }
 
+func (lru *LRUCache) Lock() {
+	lru.lock.Lock()
+}
+
+func (lru *LRUCache) Unlock() {
+	lru.lock.Unlock()
+}
+
 // Get
 func (lru *LRUCache) Get(key string) (string, bool) {
 	lru.lock.Lock()
@@ -140,8 +148,8 @@ func (lru *LRUCache) Get(key string) (string, bool) {
 
 }
 
-// GetAll key-value records
-func (lru *LRUCache) GetAll() map[string]string {
+// GetSnapshot key-value records
+func (lru *LRUCache) GetSnapshot() map[string]string {
 	lru.lock.RLock()
 	defer lru.lock.RUnlock()
 
@@ -308,8 +316,8 @@ func (c *LRUCache2) Keys() []string {
 	return keys
 }
 
-// GetAll key-value records
-func (lru *LRUCache2) GetAll() map[string]string {
+// GetSnapshot key-value records
+func (lru *LRUCache2) GetSnapshot() map[string]string {
 	lru.lock.RLock()
 	defer lru.lock.RUnlock()
 
@@ -321,6 +329,14 @@ func (lru *LRUCache2) GetAll() map[string]string {
 	}
 
 	return keyValMap
+}
+
+func (lru *LRUCache2) Lock() {
+	lru.lock.Lock()
+}
+
+func (lru *LRUCache2) Unlock() {
+	lru.lock.Unlock()
 }
 
 // func (lru *LRUCache2) SetLogger(logger logger.Logger) {

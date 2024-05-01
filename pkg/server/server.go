@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/voukatas/CacheGopher/pkg/cache"
 	"github.com/voukatas/CacheGopher/pkg/config"
@@ -18,7 +19,9 @@ type Server struct {
 	replicator     replication.ReplicationService
 	isPrimary      bool
 	primaryAddress string
-	// logEvent LogEvent
+	queuedWrites   []*LogEvent
+	writeLock      sync.Mutex
+	isRecovering   bool
 }
 
 func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.ReplicationService, isPrimary bool, primaryAddress string) *Server {
@@ -31,14 +34,79 @@ func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.R
 	}
 }
 
+type LogEvent struct {
+	//Timestamp time.Time
+	Key   string
+	Value string
+	Op    string
+	//SeqNum    int64 // maybe i need it in future
+}
+
 func (s *Server) SendCurrentState(conn net.Conn) {
 	s.logger.Debug("Sending current state")
 
-	data := s.cache.GetAll()
+	data := s.cache.GetSnapshot()
 	for k, v := range data {
-		fmt.Fprintf(conn, "%s %s\n", k, v)
+		fmt.Fprintf(conn, "SET %s %s\n", k, v)
 		s.logger.Debug("Key: " + k + "Value: " + v + "\n")
 
+	}
+
+}
+
+func (s *Server) StopWriteOpsAndEnableQueuedWrites() {
+	s.cache.Lock()
+	defer s.cache.Unlock()
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
+	s.logger.Debug("isRecovering = true")
+
+	s.isRecovering = true
+}
+
+func (s *Server) SendQueuedWrites(conn net.Conn) {
+	s.cache.Lock()
+	defer s.cache.Unlock()
+
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
+
+	s.logger.Debug("inside SendQueuedWrites")
+
+	for _, v := range s.queuedWrites {
+
+		if v.Op == "SET" {
+
+			fmt.Fprintf(conn, "SET %s %s\n", v.Key, v.Value)
+			s.logger.Debug("Key: " + v.Key + "Value: " + v.Value + "\n")
+
+		} else if v.Op == "DELETE" {
+
+			fmt.Fprintf(conn, "DELETE %s\n", v.Key)
+			s.logger.Debug("Key: " + v.Key + "\n")
+
+		}
+
+	}
+
+	s.queuedWrites = []*LogEvent{}
+	s.isRecovering = false
+
+}
+
+func (s *Server) IsRecovering(cmd []string) {
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
+
+	if s.isRecovering {
+
+		event := &LogEvent{
+			Key:   cmd[1],
+			Value: cmd[2],
+			Op:    cmd[0],
+		}
+
+		s.queuedWrites = append(s.queuedWrites, event)
 	}
 
 }
@@ -63,7 +131,6 @@ func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
 	} else {
 
 		for _, serverId := range myConfig.Secondaries {
-			//fmt.Println("in here")
 			fmt.Println("\n", serverId)
 			replConn, err := s.replicator.GetSecondaryConn(serverId)
 			//conn, err := net.Dial("tcp", "localhost:31338")
@@ -97,12 +164,23 @@ func (s *Server) startRecovery(replConn *replication.ReplConn) error {
 		if replConn.Scanner.Text() == "RECOVEREND" {
 			break
 		}
-		parts := strings.SplitN(replConn.Scanner.Text(), " ", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("failed to parse recover key value")
-		}
+		parts := strings.SplitN(replConn.Scanner.Text(), " ", 3)
 
-		s.cache.Set(parts[0], parts[1])
+		switch parts[0] {
+		case "SET":
+			if len(parts) != 3 {
+				return fmt.Errorf("failed to parse recover key value")
+			}
+
+			s.cache.Set(parts[1], parts[2])
+		case "DELETE":
+			if len(parts) != 2 {
+				return fmt.Errorf("failed to parse recover key value")
+			}
+
+			s.cache.Delete(parts[1])
+
+		}
 	}
 
 	if err := replConn.Scanner.Err(); err != nil {
@@ -137,6 +215,10 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			fmt.Fprintf(conn, "OK\n")
 			s.logger.Debug("SET OK")
 			s.replicator.AddWriteEvent(replication.WriteEvent{Key: cmd[1], Value: cmd[2], Cmd: cmd[0]})
+
+			// check if we recover and do your thing
+			s.IsRecovering(cmd)
+
 		case "GET":
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
@@ -166,6 +248,9 @@ func (s *Server) HandleConnection(conn net.Conn) {
 
 				fmt.Fprintf(conn, "ERROR: No such key\n")
 			}
+
+			// check if we recover and do your thing
+			s.IsRecovering(cmd)
 
 		case "FLUSH":
 			if len(cmd) != 1 {
@@ -202,23 +287,29 @@ func (s *Server) HandleConnection(conn net.Conn) {
 		case "RECOVER":
 			s.logger.Debug("RECOVER")
 			// get the lock for write to block any write operation and start keeping in memory the write changes in a log slice
-			s.SendCurrentState(conn)
+			if s.isPrimary {
+				s.logger.Debug("It is a Primary node")
+				// do something
+				// since it is a primary node we need to stop briefly the write operations and enable queued writes
+				s.StopWriteOpsAndEnableQueuedWrites()
+			}
 
 			// lock in read mode and send all the current keys
+			s.SendCurrentState(conn)
 
 			// lock in write mode to send all the remaining keys if it is the primary server
-			if s.replicator.IsPrimary() {
-				s.logger.Debug("IsPrimary true")
-			} else {
-				s.logger.Debug("Not a primary node")
-			}
-			// if s.isPrimary {
+			// if s.replicator.IsPrimary() {
 			// 	s.logger.Debug("IsPrimary true")
 			// } else {
 			// 	s.logger.Debug("Not a primary node")
 			// }
+			if s.isPrimary {
+				//s.logger.Debug("IsPrimary true")
+				s.SendQueuedWrites(conn)
+			}
+
 			fmt.Fprintf(conn, "RECOVEREND\n")
-			//return
+
 		case "EXIT":
 
 			fmt.Fprintf(conn, "Goodbye!\n")

@@ -61,6 +61,7 @@ func TestServerIntegration(t *testing.T) {
 	}
 }
 
+// ToDo: This thing needs refactor...
 func TestKeyReplicationAndRecovery(t *testing.T) {
 	log := logger.SetupDebugLogger()
 
