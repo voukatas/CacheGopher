@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/voukatas/CacheGopher/pkg/config"
@@ -22,11 +23,14 @@ func (mr *MockReplicator) IsPrimary() bool {
 func (mr *MockReplicator) GetSecondaryConn(id string) (*ReplConn, error) {
 	return nil, nil
 }
+func (mr *MockReplicator) RemoveConn(id string) {
+}
 
 type ReplicationService interface {
 	AddWriteEvent(WriteEvent)
 	IsPrimary() bool
 	GetSecondaryConn(string) (*ReplConn, error)
+	RemoveConn(string)
 }
 
 type ReplConn struct {
@@ -42,6 +46,7 @@ type WriteEvent struct {
 
 type Replicator struct {
 	connMap     map[string]*ReplConn
+	connMapLock sync.RWMutex
 	secondaries []config.ServerConfig
 	writeCh     chan WriteEvent
 	logger      logger.Logger
@@ -96,7 +101,18 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 	return rep, nil
 }
 
+func (rp *Replicator) RemoveConn(serverId string) {
+	rp.connMapLock.Lock()
+	defer rp.connMapLock.Unlock()
+	rp.logger.Debug("inside RemoveConn")
+
+	delete(rp.connMap, serverId)
+}
+
 func (rp *Replicator) GetSecondaryConn(id string) (*ReplConn, error) {
+	rp.connMapLock.RLock()
+	defer rp.connMapLock.RUnlock()
+
 	replConn, exists := rp.connMap[id]
 	if !exists {
 		return nil, fmt.Errorf("connection to server not found")
@@ -132,9 +148,13 @@ func (r *Replicator) checkResponse(conn *ReplConn) error {
 
 func (rc *ReplConn) checkConnResp() error {
 	if rc.Scanner.Scan() {
+
+		fmt.Println("checkConnResp received: ", rc.Scanner.Text())
 		if rc.Scanner.Text() != "OK" {
 			return fmt.Errorf("received: " + rc.Scanner.Text() + " instead of OK")
 		}
+	} else {
+		return fmt.Errorf("No response received")
 	}
 
 	if err := rc.Scanner.Err(); err != nil {
@@ -160,6 +180,7 @@ func sendCommand(replConn *ReplConn, we WriteEvent) error {
 	}
 	//cmd = fmt.Sprintf("%s %s %s\n", we.Cmd, we.Key, we.Value)
 	_, err := replConn.Conn.Write([]byte(cmd))
+	//fmt.Println("inside send command : ", err.Error())
 	return err
 }
 
@@ -168,11 +189,16 @@ func reEstablishConnection(address string) (*ReplConn, error) {
 	return establishConnection(address)
 }
 
+// ToDo: THIS THING NEEDS REFACTOR
 // If one secondary server fails continue trying with the others
 func (r *Replicator) replicateTask(we WriteEvent) {
+	r.connMapLock.Lock()
+	defer r.connMapLock.Unlock()
+
 	for _, server := range r.secondaries {
 		replConn, exists := r.connMap[server.ID]
 		if !exists {
+			fmt.Println("========= HERE 1")
 			conn, err := establishConnection(server.Address)
 			if err != nil {
 				r.logger.Error("failed to establish connection" + err.Error())
@@ -188,12 +214,16 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 
 		// cmd := fmt.Sprintf("%s %s %s\n", we.cmd, we.key, we.value)
 		// _, err := replConn.conn.Write([]byte(cmd))
+
+		// There is a case where the connection drop is not detected immediatelly so no error is returned, we will handle it at the end
+		fmt.Println("========= HERE 0000")
 		err := sendCommand(replConn, we)
 		currentConn := replConn
 
 		if err != nil {
 			replConn.Conn.Close()
 
+			fmt.Println("========= HERE 2")
 			newConn, err := reEstablishConnection(server.Address)
 			if err != nil {
 				r.logger.Error("failed to establish connection" + err.Error())
@@ -223,7 +253,25 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 		}
 
 		if err := r.checkResponse(currentConn); err != nil {
+			fmt.Println("========= HERE 3")
 			r.logger.Error(fmt.Sprintf("Response check failed for %s: %v", server.ID, err.Error()))
+			r.logger.Error(fmt.Sprintf("Retry one more time to connect to %s", server.ID))
+
+			// This is for the case that the dropped connection is not imediatelly detected
+
+			conn, err := establishConnection(server.Address)
+			if err != nil {
+				r.logger.Error("failed to establish connection" + err.Error())
+				return
+			}
+			r.connMap[server.ID] = conn
+			err = sendCommand(conn, we)
+			if err != nil {
+				conn.Conn.Close()
+				r.logger.Error(err.Error())
+				continue
+			}
+
 		}
 
 		// else {

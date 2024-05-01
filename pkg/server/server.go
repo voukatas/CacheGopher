@@ -123,7 +123,7 @@ func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
 		defer conn.Close()
 		scanner := bufio.NewScanner(conn)
 		replConn := &replication.ReplConn{Conn: conn, Scanner: scanner}
-		err = s.startRecovery(replConn)
+		err = s.startRecovery(replConn, myConfig.ID)
 		if err != nil {
 			return fmt.Errorf("failed to recover")
 		}
@@ -140,7 +140,7 @@ func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
 			}
 			//defer conn.Close()
 
-			err = s.startRecovery(replConn)
+			err = s.startRecovery(replConn, myConfig.ID)
 			if err != nil {
 				return fmt.Errorf("failed to recover")
 			}
@@ -155,9 +155,9 @@ func (s *Server) HandleRecovery(myConfig config.ServerConfig) error {
 
 }
 
-func (s *Server) startRecovery(replConn *replication.ReplConn) error {
+func (s *Server) startRecovery(replConn *replication.ReplConn, serverId string) error {
 	s.logger.Debug("Initiating recovery process")
-	fmt.Fprintf(replConn.Conn, "RECOVER\n")
+	fmt.Fprintf(replConn.Conn, "RECOVER "+serverId+"\n")
 	//scanner := bufio.NewScanner(replConn.Scanner)
 	for replConn.Scanner.Scan() {
 		s.logger.Debug("Line: " + replConn.Scanner.Text())
@@ -173,12 +173,14 @@ func (s *Server) startRecovery(replConn *replication.ReplConn) error {
 			}
 
 			s.cache.Set(parts[1], parts[2])
+			fmt.Fprintf(replConn.Conn, "OK\n")
 		case "DELETE":
 			if len(parts) != 2 {
 				return fmt.Errorf("failed to parse recover key value")
 			}
 
 			s.cache.Delete(parts[1])
+			fmt.Fprintf(replConn.Conn, "OK\n")
 
 		}
 	}
@@ -203,6 +205,9 @@ func (s *Server) HandleConnection(conn net.Conn) {
 	scanner.Buffer(buf, maxTokenSize)
 
 	for scanner.Scan() {
+
+		s.logger.Debug("inside scanner: " + scanner.Text())
+
 		cmd := strings.SplitN(scanner.Text(), " ", 3)
 		switch cmd[0] {
 		case "SET":
@@ -286,6 +291,8 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			s.logger.Debug("PONG")
 		case "RECOVER":
 			s.logger.Debug("RECOVER")
+			s.logger.Debug("serverId: " + cmd[1])
+			s.replicator.RemoveConn(cmd[1])
 			// get the lock for write to block any write operation and start keeping in memory the write changes in a log slice
 			if s.isPrimary {
 				s.logger.Debug("It is a Primary node")
@@ -309,6 +316,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			}
 
 			fmt.Fprintf(conn, "RECOVEREND\n")
+			return
 
 		case "EXIT":
 
