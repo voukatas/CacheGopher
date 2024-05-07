@@ -143,10 +143,28 @@ func TestKeyReplicationAndRecoveryForTheSecondary(t *testing.T) {
 		t.Fatalf(`res= %q; want "OK"`, res)
 	}
 
+	fmt.Fprintf(clientConn, "SET myKey2 myValue\n")
+
+	reader = bufio.NewReader(clientConn)
+	res, _, err = reader.ReadLine()
+	if err != nil {
+		t.Fatalf("Failed to read from connection: %v", err)
+	}
+
+	if string(res) != "OK" {
+		t.Fatalf(`res= %q; want "OK"`, res)
+	}
 	time.Sleep(1 * time.Second)
 
 	// verify that the key-value was written on primary
 	_, exists := primaryServer.cache.Get("myKey")
+	if !exists {
+		t.Error("Primary should have the key 'myKey'")
+	}
+	_, exists = primaryServer.cache.Get("myKey2")
+	if !exists {
+		t.Error("Primary should have the key 'myKey2'")
+	}
 	//fmt.Println("exists? ", exists, v)
 
 	// verify that the key-value was replicated on the secondary
@@ -154,6 +172,11 @@ func TestKeyReplicationAndRecoveryForTheSecondary(t *testing.T) {
 	//fmt.Println("exists? ", exists)
 	if !exists {
 		t.Error("Secondary should have the key 'myKey'")
+	}
+	_, exists = secondaryServer.cache.Get("myKey2")
+	//fmt.Println("exists? ", exists)
+	if !exists {
+		t.Error("Secondary should have the key 'myKey2'")
 	}
 
 	// delete the key from the secondary
@@ -168,6 +191,17 @@ func TestKeyReplicationAndRecoveryForTheSecondary(t *testing.T) {
 
 	// trigger the recovery procedure on the secondary
 	secondaryServer.HandleRecovery(secondaryConfig)
+	fmt.Fprintf(clientConn, "DELETE myKey2\n")
+
+	reader = bufio.NewReader(clientConn)
+	res, _, err = reader.ReadLine()
+	if err != nil {
+		t.Fatalf("Failed to read from connection: %v", err)
+	}
+
+	if string(res) != "OK" {
+		t.Fatalf(`res= %q; want "OK"`, res)
+	}
 	time.Sleep(1 * time.Second)
 
 	// verify that the key was recovered
@@ -175,6 +209,11 @@ func TestKeyReplicationAndRecoveryForTheSecondary(t *testing.T) {
 	//fmt.Println("exists? ", exists)
 	if !exists {
 		t.Error("Secondary should have the key 'myKey'")
+	}
+	_, exists = secondaryServer.cache.Get("myKey2")
+	//fmt.Println("exists? ", exists)
+	if exists {
+		t.Error("Secondary should not have the key 'myKey2'")
 	}
 
 	// test recovery of the primary

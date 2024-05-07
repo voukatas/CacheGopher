@@ -99,11 +99,22 @@ func (s *Server) IsRecovering(cmd []string) {
 	defer s.writeLock.Unlock()
 
 	if s.isRecovering {
+		var event *LogEvent
 
-		event := &LogEvent{
-			Key:   cmd[1],
-			Value: cmd[2],
-			Op:    cmd[0],
+		if cmd[0] == "SET" {
+			event = &LogEvent{
+				Key:   cmd[1],
+				Value: cmd[2],
+				Op:    cmd[0],
+			}
+		} else if cmd[0] == "DELETE" {
+			event = &LogEvent{
+				Key: cmd[1],
+				Op:  cmd[0],
+			}
+		} else {
+			s.logger.Error("Unknown command: " + cmd[0])
+			return
 		}
 
 		s.queuedWrites = append(s.queuedWrites, event)
@@ -303,6 +314,9 @@ func (s *Server) HandleConnection(conn net.Conn) {
 
 			// lock in read mode and send all the current keys
 			s.SendCurrentState(conn)
+
+			s.logger.Debug("state send")
+			//time.Sleep(10 * 1000 * time.Millisecond)
 
 			// lock in write mode to send all the remaining keys if it is the primary server
 			// if s.replicator.IsPrimary() {
