@@ -48,6 +48,7 @@ type PoolConn struct {
 type ConnPool struct {
 	pool    chan *PoolConn
 	address string
+	cfg     config.ClientConfig
 	// size    int
 }
 
@@ -84,8 +85,9 @@ func (rb *ReadBalancer) getNextCacheNode() *CacheNode {
 	return node
 }
 
-func (pc *PoolConn) isExpired() bool {
-	const maxValidTime = 5 * time.Minute
+func (pc *PoolConn) isExpired(timeout int) bool {
+	maxValidTime := time.Duration(timeout) * time.Second
+	getLogger().Debug("isExpired timeout: " + maxValidTime.String())
 	return time.Since(pc.createdAt) > maxValidTime
 }
 
@@ -121,10 +123,11 @@ func (pc *PoolConn) Close() {
 	pc.conn.Close()
 }
 
-func NewConnPool(size int, address string) *ConnPool {
+func NewConnPool(size int, address string, cfg config.ClientConfig) *ConnPool {
 	return &ConnPool{
 		pool:    make(chan *PoolConn, size),
 		address: address,
+		cfg:     cfg,
 		// size:    size,
 	}
 }
@@ -135,7 +138,7 @@ func (cp *ConnPool) Get() (*PoolConn, error) {
 	for {
 		select {
 		case poolConn := <-cp.pool:
-			if poolConn.isExpired() || !poolConn.isValid() {
+			if poolConn.isExpired(cp.cfg.ConnectionTimeout) || !poolConn.isValid() {
 				getLogger().Debug("isExpired or is invalid")
 				poolConn.Close()
 				continue
@@ -164,7 +167,19 @@ func (cp *ConnPool) dialWithBackOff() (*PoolConn, error) {
 		conn, err = net.Dial("tcp", cp.address)
 
 		if err == nil {
-			poolConn := &PoolConn{conn: conn, scanner: bufio.NewScanner(conn), createdAt: time.Now()}
+			tcpConn, ok := conn.(*net.TCPConn)
+			if !ok {
+				getLogger().Debug("Connection is not TCP type")
+				err = fmt.Errorf("expected TCP connection, got different type")
+				continue
+
+			}
+
+			tcpConn.SetKeepAlive(true)
+			tcpConn.SetKeepAlivePeriod(time.Duration(cp.cfg.KeepAliveInterval) * time.Second)
+			getLogger().Debug("KeepAlive: " + fmt.Sprint(cp.cfg.KeepAliveInterval))
+
+			poolConn := &PoolConn{conn: tcpConn, scanner: bufio.NewScanner(tcpConn), createdAt: time.Now()}
 			getLogger().Debug("Successfully Created poolConn")
 			return poolConn, nil
 		}
@@ -206,6 +221,7 @@ type Client struct {
 	//pool *ConnPool
 	ring      HashRing
 	balancers map[string]*ReadBalancer
+	//cfg       config.ClientConfig
 
 	//logger logger.Logger
 	// conn    net.Conn
@@ -230,7 +246,7 @@ func NewClient(enableLogging bool) (*Client, error) {
 
 	for _, node := range cfg.Servers {
 
-		newPool := NewConnPool(5, node.Address)
+		newPool := NewConnPool(5, node.Address, cfg.ClientConfig)
 
 		if strings.ToUpper(node.Role) == "PRIMARY" {
 			newNode := NewCacheNode(node.ID, true, newPool)
@@ -239,6 +255,7 @@ func NewClient(enableLogging bool) (*Client, error) {
 			newBalancer := NewReadBalancer()
 			newBalancer.addCacheNode(newNode)
 			balancers[node.ID] = newBalancer
+
 		} else if strings.ToUpper(node.Role) == "SECONDARY" {
 			newNode := NewCacheNode(node.ID, false, newPool)
 
@@ -259,6 +276,7 @@ func NewClient(enableLogging bool) (*Client, error) {
 	return &Client{
 		ring:      ring,
 		balancers: balancers,
+		//cfg:       cfg.ClientConfig,
 		//pool: pool,
 		//logger: libLogger,
 		// conn:    conn,

@@ -12,7 +12,14 @@ func TestLoadConfigSuccess(t *testing.T) {
 	}
 	defer os.Remove(tmpfile.Name()) // clean up
 
-	configJSON := `{
+	configJSON := `
+
+	{
+"clientConf": {
+	"connectionTimeout": 300,
+	"keepAliveInterval": 15
+},
+	
 		"common": {
 			"production": false,
 			"max_size": 10000,
@@ -51,6 +58,12 @@ func TestLoadConfigSuccess(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
+	if config.ClientConfig.ConnectionTimeout != 300 {
+		t.Errorf("Expected ConnectionTimeout to be 300")
+	}
+	if config.ClientConfig.KeepAliveInterval != 15 {
+		t.Errorf("Expected KeepAliveInterval to be 15")
+	}
 	if config.Common.Production != false {
 		t.Errorf("Expected Production to be false")
 	}

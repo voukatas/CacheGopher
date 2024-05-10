@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/voukatas/CacheGopher/pkg/config"
 )
 
 func startMockServer(port string) {
@@ -50,7 +52,7 @@ func TestClient(t *testing.T) {
 	go startMockServer("3333")
 	time.Sleep(time.Second)
 
-	pool := NewConnPool(1, "localhost:3333")
+	pool := NewConnPool(1, "localhost:3333", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode := NewCacheNode("testNode", true, pool)
 
 	ring := NewHashRing()

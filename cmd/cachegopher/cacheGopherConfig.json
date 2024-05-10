@@ -1,4 +1,8 @@
 {
+"clientConf": {
+	"connectionTimeout": 300,
+	"keepAliveInterval": 15
+},
 "common": {
 	"production": false,
 	"max_size": 10000,

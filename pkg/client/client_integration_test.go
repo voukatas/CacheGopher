@@ -3,6 +3,8 @@ package client
 import (
 	"strings"
 	"testing"
+
+	"github.com/voukatas/CacheGopher/pkg/config"
 )
 
 func TestRealServerInteraction(t *testing.T) {
@@ -21,7 +23,7 @@ func TestRealServerInteraction(t *testing.T) {
 	// 	t.Fatalf("Failed to create client: %v", err)
 	// }
 
-	pool := NewConnPool(1, "localhost:12345")
+	pool := NewConnPool(1, "localhost:12345", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode := NewCacheNode("testNode", true, pool)
 
 	ring := NewHashRing()

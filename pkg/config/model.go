@@ -1,9 +1,10 @@
 package config
 
 type Configuration struct {
-	Common  Common         `json:"common"`
-	Servers []ServerConfig `json:"servers"`
-	Logging LoggingConfig  `json:"logging"`
+	ClientConfig ClientConfig   `json:"clientConf"`
+	Common       Common         `json:"common"`
+	Servers      []ServerConfig `json:"servers"`
+	Logging      LoggingConfig  `json:"logging"`
 }
 
 type Common struct {
@@ -24,4 +25,9 @@ type LoggingConfig struct {
 	//Enabled bool   `json:"enabled"`
 	Level string `json:"level"`
 	File  string `json:"file"`
+}
+
+type ClientConfig struct {
+	ConnectionTimeout int `json:"connectionTimeout"`
+	KeepAliveInterval int `json:"keepAliveInterval"`
 }

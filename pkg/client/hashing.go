@@ -50,6 +50,7 @@ func (s *SimpleHashRing) AddNode(node *CacheNode) {
 	// s.lock.Lock()
 	// defer s.lock.Unlock()
 	//fmt.Println("node hash: ", node.Hash)
+	//getLogger().Debug("node hash: " + fmt.Sprintf("%v", node.Hash))
 
 	s.nodes = append(s.nodes, node)
 	sort.Slice(s.nodes, func(i, j int) bool {
