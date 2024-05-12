@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/voukatas/CacheGopher/pkg/config"
+	"github.com/voukatas/CacheGopher/pkg/errorutil"
 	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
@@ -69,7 +70,8 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 
 			conn, err := establishConnection(server.Address)
 			if err != nil {
-				logger.Error("failed to establish connection" + err.Error())
+				//logger.Error("failed to establish connection: " + err.Error())
+				logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				continue
 				// return nil, err
 			}
@@ -198,10 +200,10 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 	for _, server := range r.secondaries {
 		replConn, exists := r.connMap[server.ID]
 		if !exists {
-			fmt.Println("========= HERE 1")
 			conn, err := establishConnection(server.Address)
 			if err != nil {
-				r.logger.Error("failed to establish connection" + err.Error())
+				//r.logger.Error("failed to establish connection" + err.Error())
+				r.logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				continue
 			}
 			r.connMap[server.ID] = conn
@@ -216,17 +218,16 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 		// _, err := replConn.conn.Write([]byte(cmd))
 
 		// There is a case where the connection drop is not detected immediatelly so no error is returned, we will handle it at the end
-		fmt.Println("========= HERE 0000")
 		err := sendCommand(replConn, we)
 		currentConn := replConn
 
 		if err != nil {
 			replConn.Conn.Close()
 
-			fmt.Println("========= HERE 2")
 			newConn, err := reEstablishConnection(server.Address)
 			if err != nil {
-				r.logger.Error("failed to establish connection" + err.Error())
+				//r.logger.Error("failed to establish connection" + err.Error())
+				r.logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				continue
 			}
 
@@ -237,7 +238,8 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 
 			if err != nil {
 				newConn.Conn.Close()
-				r.logger.Error(err.Error())
+				//r.logger.Error(err.Error())
+				r.logger.Error(errorutil.Wrap(err, "").Error())
 				continue
 			}
 
@@ -253,7 +255,6 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 		}
 
 		if err := r.checkResponse(currentConn); err != nil {
-			fmt.Println("========= HERE 3")
 			r.logger.Error(fmt.Sprintf("Response check failed for %s: %v", server.ID, err.Error()))
 			r.logger.Error(fmt.Sprintf("Retry one more time to connect to %s", server.ID))
 
@@ -261,7 +262,8 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 
 			conn, err := establishConnection(server.Address)
 			if err != nil {
-				r.logger.Error("failed to establish connection" + err.Error())
+				//r.logger.Error("failed to establish connection" + err.Error())
+				r.logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				return
 			}
 			r.connMap[server.ID] = conn

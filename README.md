@@ -163,6 +163,21 @@ func main() {
 	}
 }
 ```
+## How to use the recover functionality
+If one of the servers crashed or stopped for any reason and you want to start it again and be in sync with the others/primary, you can start it again using the recover option. 
+For example, if you need to start the server_A1 then do this:
+
+```bash
+./server --server-id server_A1 --recover
+```
+
+** Note: Since the primary keeps the most recent info, if you want to recover both a secondary and a primary server then always start with the primary first and then continue with the others **
+
+### The logic of the recovery functionality
+If a secondary server starts with the --recover flag then it finds the primary server and retrieves the values.
+During this process the bulk of the work is done with minimal disruption for the primary server (meaning the write functionality), but to be completely in sync the secondary with the primary server, after the bulk of the data is restored, the primary server briefly stops any write functionality to finalize the recovery with the secondary
+
+If a primary server starts with the --recover flag then it just finds the first available secondary and retrieves the values
 
 ## A direct way to communicate with the db, like a cli
 Open a netcat/telnet client and connect to the server
@@ -228,6 +243,7 @@ go test -bench=BenchmarkCacheSet
 - Add configuration option for the retries in server
 - Add more eviction policies
 - Add authentication
+- Add a better error logging to keep the context and add stacktraces
 - Remove the validity check of the connection before each command and introduce a goroutine that does this job asynchronously
 - Create a --recover option which will start a server in recovery mode which means that the server will copy the current key-values from the other servers 
 - Promote a replica node to a primary role in case the original primary node fails
