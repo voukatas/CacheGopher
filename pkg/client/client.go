@@ -138,7 +138,7 @@ func (cp *ConnPool) Get() (*PoolConn, error) {
 	for {
 		select {
 		case poolConn := <-cp.pool:
-			if poolConn.isExpired(cp.cfg.ConnectionTimeout) || !poolConn.isValid() {
+			if poolConn.isExpired(cp.cfg.ConnectionTimeout) { // || !poolConn.isValid() {
 				getLogger().Debug("isExpired or is invalid")
 				poolConn.Close()
 				continue

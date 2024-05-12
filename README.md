@@ -47,6 +47,10 @@ Inside the bin/ modify the json as you like
 
 ```json
 {
+"clientConf": {
+	"connectionTimeout": 300,
+	"keepAliveInterval": 15
+},
 "common": {
 	"production": false,
 	"max_size": 10000,
@@ -205,7 +209,8 @@ FLUSH
 ```
 
 ## General guidelines for the configuration
-- If you have less write operations and more read operations you can set a relative small number to avoid searching for scattered values around the memory. If the opposite is your case (more writes and less read operations) use a larger size to avoid the overhead of deletion and moving around of the elements.
+- The clientConf section contains the values to configure the client and is measured in seconds
+- If you have less write operations and more read operations you can set a relative small number to avoid searching for scattered values around the memory. If the opposite is your case (more writes and less read operations) use a larger size to avoid the overhead of deletion and moving around of the elements
 
 # How to build/run as a developer
 

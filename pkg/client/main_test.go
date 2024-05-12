@@ -21,9 +21,9 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func startTestServer(t *testing.T) (*net.Listener, error) {
+func startTestServer(t *testing.T, cap int) (*net.Listener, error) {
 	tlogger := logger.SetupDebugLogger()
-	localCache, err := cache.NewCache("LRU", 10)
+	localCache, err := cache.NewCache("LRU", cap)
 	if err != nil {
 		fmt.Println("failed to start cache: ", err.Error())
 		os.Exit(1)

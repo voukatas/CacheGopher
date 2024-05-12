@@ -151,7 +151,7 @@ func (r *Replicator) checkResponse(conn *ReplConn) error {
 func (rc *ReplConn) checkConnResp() error {
 	if rc.Scanner.Scan() {
 
-		fmt.Println("checkConnResp received: ", rc.Scanner.Text())
+		//fmt.Println("checkConnResp received: ", rc.Scanner.Text())
 		if rc.Scanner.Text() != "OK" {
 			return fmt.Errorf("received: " + rc.Scanner.Text() + " instead of OK")
 		}

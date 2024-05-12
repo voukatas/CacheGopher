@@ -235,7 +235,10 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			// check if we recover and do your thing
 			s.IsRecovering(cmd)
 
+			//fmt.Println("Keys SET : ", s.cache.Keys())
+
 		case "GET":
+			//fmt.Println("Keys GET : ", s.cache.Keys())
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
 				s.logger.Debug("ERROR: Usage: GET <key>")
