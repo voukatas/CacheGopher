@@ -175,6 +175,11 @@ func (cp *ConnPool) dialWithBackOff() (*PoolConn, error) {
 
 			}
 
+			// disable Nagle's Algorithm
+			// if err := tcpConn.SetNoDelay(true); err != nil {
+			// 	return nil, fmt.Errorf("failed to set TCP_NODELAY: %s", err)
+			// }
+
 			tcpConn.SetKeepAlive(true)
 			tcpConn.SetKeepAlivePeriod(time.Duration(cp.cfg.KeepAliveInterval) * time.Second)
 			getLogger().Debug("KeepAlive: " + fmt.Sprint(cp.cfg.KeepAliveInterval))
@@ -308,7 +313,7 @@ func validateCommand(cmdBytes []byte) error {
 
 func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 
-	cmdBytes := []byte(cmd + "\n")
+	cmdBytes := []byte(strings.TrimSpace(cmd) + " \n")
 
 	if err := validateCommand(cmdBytes); err != nil {
 

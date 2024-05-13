@@ -31,7 +31,7 @@ func startMockServer(port string) {
 func handleMockConnection(conn net.Conn) {
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
-		text := scanner.Text()
+		text := strings.TrimSpace(scanner.Text())
 		switch {
 		case text == "PING":
 			fmt.Fprintln(conn, "PONG")

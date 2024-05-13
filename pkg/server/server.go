@@ -214,12 +214,13 @@ func (s *Server) HandleConnection(conn net.Conn) {
 
 	scanner := bufio.NewScanner(conn) // Can read up to 64KB by default
 	scanner.Buffer(buf, maxTokenSize)
+	s.logger.Debug("inside HandleConnection")
 
 	for scanner.Scan() {
 
 		s.logger.Debug("inside scanner: " + scanner.Text())
 
-		cmd := strings.SplitN(scanner.Text(), " ", 3)
+		cmd := strings.SplitN(strings.TrimSpace(scanner.Text()), " ", 3)
 		switch cmd[0] {
 		case "SET":
 			if len(cmd) != 3 {
