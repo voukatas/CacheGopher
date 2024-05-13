@@ -254,6 +254,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			s.logger.Debug("GET" + " value:" + v)
 
 		case "DELETE":
+			//fmt.Println("Keys DELETE : ", s.cache.Keys())
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: DELETE <key>\n")
 				continue

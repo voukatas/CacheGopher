@@ -324,10 +324,13 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 	for attempts > 0 {
 		poolConn, err = node.ConnPool.Get()
 		if err != nil {
+			getLogger().Debug("Error in conn pool" + err.Error())
 			return "", err
 		}
 
+		getLogger().Debug("sendCommand: Before writing to the connection")
 		_, err = poolConn.conn.Write(cmdBytes)
+		getLogger().Debug("sendCommand: After writing to the connection")
 
 		if err != nil {
 			poolConn.Close()
@@ -345,6 +348,7 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 	defer node.ConnPool.Return(poolConn)
 
 	//poolConn.scanner = bufio.NewScanner(poolConn.conn)
+	getLogger().Debug("sendCommand: Waiting for response")
 
 	if poolConn.scanner.Scan() {
 		getLogger().Debug("Data from read: " + poolConn.scanner.Text())
