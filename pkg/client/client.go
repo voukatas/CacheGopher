@@ -313,7 +313,7 @@ func validateCommand(cmdBytes []byte) error {
 
 func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 
-	cmdBytes := []byte(strings.TrimSpace(cmd) + " \n")
+	cmdBytes := []byte(strings.TrimSpace(cmd) + "\n")
 
 	if err := validateCommand(cmdBytes); err != nil {
 
