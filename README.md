@@ -218,14 +218,20 @@ Clone the repo and then run the main.go
 ```bash
 cd CacheGopher/cmd/cachegopher/
 go run main.go
+
+# or for data race detection
+go run -race main.go
 ```
 
 # Run tests
 On the CacheGopher directory run:
 
 ```bash
+# run all tests
 go test -v -race -cover ./...
-# or use the make
+# or run a specific test
+go test -race -v -cover -run YourTestCaseHere
+# or use the make command to run the tests
 make test
 ```
 

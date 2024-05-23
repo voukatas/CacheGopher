@@ -192,6 +192,8 @@ func reEstablishConnection(address string) (*ReplConn, error) {
 }
 
 // ToDo: THIS THING NEEDS REFACTOR
+// Maybe refactor this using a granular locking where a sync.Map keeps the locks or an actor model approach to increase performance and avoid memory sharing
+
 // If one secondary server fails continue trying with the others
 func (r *Replicator) replicateTask(we WriteEvent) {
 	r.connMapLock.Lock()

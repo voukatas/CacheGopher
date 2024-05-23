@@ -22,6 +22,7 @@ type Server struct {
 	queuedWrites   []*LogEvent
 	writeLock      sync.Mutex // lock to protect the queuedWrites
 	isRecovering   bool
+	recoveryLock   sync.Mutex // lock to protect the isRecovering flag
 }
 
 func NewServer(cache cache.Cache, logger logger.Logger, replicator replication.ReplicationService, isPrimary bool, primaryAddress string) *Server {
@@ -59,6 +60,8 @@ func (s *Server) StopWriteOpsAndEnableQueuedWrites() {
 	defer s.cache.Unlock()
 	// s.writeLock.Lock()
 	// defer s.writeLock.Unlock()
+	s.recoveryLock.Lock()
+	defer s.recoveryLock.Unlock()
 	s.logger.Debug("isRecovering = true")
 
 	s.isRecovering = true
@@ -70,6 +73,9 @@ func (s *Server) SendQueuedWrites(conn net.Conn) {
 
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
+
+	s.recoveryLock.Lock()
+	defer s.recoveryLock.Unlock()
 
 	s.logger.Debug("inside SendQueuedWrites")
 
@@ -95,6 +101,9 @@ func (s *Server) SendQueuedWrites(conn net.Conn) {
 }
 
 func (s *Server) IsRecovering(cmd []string) {
+
+	s.recoveryLock.Lock()
+	defer s.recoveryLock.Unlock()
 
 	if s.isRecovering {
 		var event *LogEvent
