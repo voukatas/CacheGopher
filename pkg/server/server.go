@@ -20,7 +20,7 @@ type Server struct {
 	isPrimary      bool
 	primaryAddress string
 	queuedWrites   []*LogEvent
-	writeLock      sync.Mutex
+	writeLock      sync.Mutex // lock to protect the queuedWrites
 	isRecovering   bool
 }
 
@@ -57,8 +57,8 @@ func (s *Server) SendCurrentState(conn net.Conn) {
 func (s *Server) StopWriteOpsAndEnableQueuedWrites() {
 	s.cache.Lock()
 	defer s.cache.Unlock()
-	s.writeLock.Lock()
-	defer s.writeLock.Unlock()
+	// s.writeLock.Lock()
+	// defer s.writeLock.Unlock()
 	s.logger.Debug("isRecovering = true")
 
 	s.isRecovering = true
@@ -95,8 +95,6 @@ func (s *Server) SendQueuedWrites(conn net.Conn) {
 }
 
 func (s *Server) IsRecovering(cmd []string) {
-	s.writeLock.Lock()
-	defer s.writeLock.Unlock()
 
 	if s.isRecovering {
 		var event *LogEvent
@@ -117,6 +115,8 @@ func (s *Server) IsRecovering(cmd []string) {
 			return
 		}
 
+		s.writeLock.Lock()
+		defer s.writeLock.Unlock()
 		s.queuedWrites = append(s.queuedWrites, event)
 	}
 
@@ -306,6 +306,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			fmt.Fprintf(conn, "PONG\n")
 			s.logger.Debug("PONG")
 		case "RECOVER":
+			// This command should be received one at a time, no two servers should send the recover command at the same time
 			s.logger.Debug("RECOVER")
 			s.logger.Debug("serverId: " + cmd[1])
 			s.replicator.RemoveConn(cmd[1])

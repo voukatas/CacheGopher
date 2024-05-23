@@ -248,7 +248,7 @@ go test -bench=BenchmarkCacheSet
 - Add configuration option for the retries in server
 - Add more eviction policies
 - Add authentication
-- Add a better error logging to keep the context and add stacktraces
+- ~~Add a better error logging to keep the context and add stacktraces~~
 - Remove the validity check of the connection before each command and introduce a goroutine that does this job asynchronously
 - Create a --recover option which will start a server in recovery mode which means that the server will copy the current key-values from the other servers 
 - Promote a replica node to a primary role in case the original primary node fails
