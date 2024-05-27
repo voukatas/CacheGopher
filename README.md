@@ -28,6 +28,7 @@ The purpose is to build a Distributed In-Memory Key-Value Store which will focus
 - Keys can't have white spaces
 - The key-value cannot contain a new line char (\n). If you want to include it then you need to escape it (e.g \\n)
 - Currently the client in the cachegopher-cli is used as testing purposes, later it will be used as the tool to communicate with each of the nodes
+- If the servers or the client is in different network, then in case a waf or other network monitoring function exist, there might be a case where the GET command is filtered. To overcome the issue you either need to deploy tls or have the elements in the same network
 
 # How to deploy
 To deploy the cache servers is very simple. Just run make and under the bin/ directory configure the cacheGopherConfig.json based on the network topology you like along with the available generic options
@@ -120,6 +121,9 @@ The server side is ready!
 ## Example usage of the client library
 
 ```go
+
+package main
+
 import (
     "fmt"
 	"github.com/voukatas/CacheGopher/pkg/client"
@@ -256,8 +260,8 @@ go test -bench=BenchmarkCacheSet
 - Add authentication
 - ~~Add a better error logging to keep the context and add stacktraces~~
 - Remove the validity check of the connection before each command and introduce a goroutine that does this job asynchronously
-- Create a --recover option which will start a server in recovery mode which means that the server will copy the current key-values from the other servers 
-- Promote a replica node to a primary role in case the original primary node fails
+- ~~Create a --recover option which will start a server in recovery mode which means that the server will copy the current key-values from the other servers~~
+- Promote a replica node to a primary role in case the original primary node fails?
 - Create Virtual Nodes for better key distribution on the each physical server
 - Add a discovery mechanism, remember to uncomment the thread-safety code in case you have automated additions or removals
 - If a discovery mechanism is introduced and a huge number of Cache nodes are expected to be added and removed dynamically, then measure the current performance of the sorting of the array and if maybe consider a change from an array to a tree (re balance tree like red-black) for faster access
