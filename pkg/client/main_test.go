@@ -21,18 +21,27 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func startTestServer(t *testing.T, cap int) (*net.Listener, error) {
+func startTestServer(t *testing.T, cap int, port int, cacheValues map[string]string) (*net.Listener, error) {
 	tlogger := logger.SetupDebugLogger()
 	localCache, err := cache.NewCache("LRU", cap)
 	if err != nil {
 		fmt.Println("failed to start cache: ", err.Error())
 		os.Exit(1)
 	}
+	// inject values in cache
+	if cacheValues != nil {
+		for k, v := range cacheValues {
+			localCache.Set(k, v)
+		}
+	}
+	fmt.Println(localCache.GetSnapshot())
 	mockReplicator := &replication.MockReplicator{}
 	// Create myServer
 	myServer := server.NewServer(localCache, tlogger, mockReplicator, false, "")
 
-	listener, err := net.Listen("tcp", "localhost:12345")
+	address := fmt.Sprintf("localhost:%d", port)
+
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		t.Fatalf("Failed to start server: %s", err)
 		return nil, err
@@ -46,6 +55,7 @@ func startTestServer(t *testing.T, cap int) (*net.Listener, error) {
 				t.Log("Server stopped accepting connections")
 				return
 			}
+			t.Logf("--------- Server %d will handle the connection", port)
 			go myServer.HandleConnection(conn)
 		}
 	}()

@@ -12,7 +12,7 @@ import (
 func TestRealServerInteraction(t *testing.T) {
 
 	// setup server
-	listener, err := startTestServer(t, 10)
+	listener, err := startTestServer(t, 10, 12345, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestRealServerInteraction(t *testing.T) {
 func TestRealServerInteractionConcurrently(t *testing.T) {
 
 	// setup server
-	listener, err := startTestServer(t, 500)
+	listener, err := startTestServer(t, 500, 12345, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,4 +127,95 @@ func TestRealServerInteractionConcurrently(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+// A round robin selection is assumed so the next server is expected to be queried in each request
+func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
+
+	// setup primary server
+	// mapPrimary := map[string]string{
+	// 	"hello": "world",
+	// }
+	listener1, err := startTestServer(t, 10, 12345, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer (*listener1).Close()
+
+	// start secondary server 1
+	mapSecondary1 := map[string]string{
+		"testkey": "testvalue1",
+	}
+	listener2, err := startTestServer(t, 10, 12346, mapSecondary1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer (*listener2).Close()
+
+	// start secondary server 2
+	mapSecondary2 := map[string]string{
+		"testkey": "testvalue2",
+	}
+	listener3, err := startTestServer(t, 10, 12347, mapSecondary2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer (*listener3).Close()
+
+	ring := NewHashRing()
+	balancers := map[string]*ReadBalancer{}
+
+	// setup primary config
+	pool := NewConnPool(1, "localhost:12345", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	newNode := NewCacheNode("testPrimary", true, pool)
+
+	ring.AddNode(newNode)
+	newBalancer := NewReadBalancer()
+	newBalancer.addCacheNode(newNode)
+	balancers["testPrimary"] = newBalancer
+
+	// setup secondary config
+	pool2 := NewConnPool(1, "localhost:12346", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	newNode2 := NewCacheNode("testSecondary1", true, pool2)
+	readBalancer := balancers["testPrimary"]
+	readBalancer.addCacheNode(newNode2)
+
+	// setup secondary config
+	pool3 := NewConnPool(1, "localhost:12347", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	newNode3 := NewCacheNode("testSecondary2", true, pool3)
+	//readBalancer := balancers["testPrimary"]
+	readBalancer.addCacheNode(newNode3)
+
+	client := &Client{
+		ring:      ring,
+		balancers: balancers,
+	}
+
+	// Test Set
+	if resp, err := client.Set("testkey", "testvalue"); err != nil || resp != "OK" {
+		t.Errorf("Set failed: resp=%s, err=%v", resp, err)
+	}
+
+	// Test Get, This should query the primary server
+	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue" {
+		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	}
+	// Test Get, This should query the first secondary server
+	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue1" {
+		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	}
+	// Test Get, This should query the second secondary server
+	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue2" {
+		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	}
+	// Test Get, This should query the primary server again
+	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue" {
+		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	}
+
+	// delete this
+	// if resp, err := client.Get("testkey"); err != nil {
+	// 	t.Errorf("Get failed: resp=%s, err=%v", resp, err)
+	// }
+
 }
