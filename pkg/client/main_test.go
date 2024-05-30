@@ -61,6 +61,6 @@ func startTestServer(t *testing.T, cap int, port int, cacheValues map[string]str
 	}()
 
 	// small delay
-	time.Sleep(time.Second)
+	time.Sleep(100)
 	return listener, nil
 }

@@ -32,8 +32,10 @@ func TestRealServerInteraction(t *testing.T) {
 	ring := NewHashRing()
 	balancers := map[string]*ReadBalancer{}
 
+	clientConf := config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15}
+
 	ring.AddNode(newNode)
-	newBalancer := NewReadBalancer()
+	newBalancer := NewReadBalancer(clientConf)
 	newBalancer.addCacheNode(newNode)
 	balancers["testNode"] = newBalancer
 
@@ -82,8 +84,10 @@ func TestRealServerInteractionConcurrently(t *testing.T) {
 	ring := NewHashRing()
 	balancers := map[string]*ReadBalancer{}
 
+	clientConf := config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15}
+
 	ring.AddNode(newNode)
-	newBalancer := NewReadBalancer()
+	newBalancer := NewReadBalancer(clientConf)
 	newBalancer.addCacheNode(newNode)
 	balancers["testNode"] = newBalancer
 
@@ -166,23 +170,25 @@ func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
 	ring := NewHashRing()
 	balancers := map[string]*ReadBalancer{}
 
+	clientConf := config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15}
+
 	// setup primary config
-	pool := NewConnPool(1, "localhost:12345", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	pool := NewConnPool(1, "localhost:12345", clientConf) // config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode := NewCacheNode("testPrimary", true, pool)
 
 	ring.AddNode(newNode)
-	newBalancer := NewReadBalancer()
+	newBalancer := NewReadBalancer(clientConf)
 	newBalancer.addCacheNode(newNode)
 	balancers["testPrimary"] = newBalancer
 
 	// setup secondary config
-	pool2 := NewConnPool(1, "localhost:12346", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	pool2 := NewConnPool(1, "localhost:12346", clientConf) // config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode2 := NewCacheNode("testSecondary1", true, pool2)
 	readBalancer := balancers["testPrimary"]
 	readBalancer.addCacheNode(newNode2)
 
 	// setup secondary config
-	pool3 := NewConnPool(1, "localhost:12347", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	pool3 := NewConnPool(1, "localhost:12347", clientConf) //  config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode3 := NewCacheNode("testSecondary2", true, pool3)
 	//readBalancer := balancers["testPrimary"]
 	readBalancer.addCacheNode(newNode3)
@@ -257,24 +263,26 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 	ring := NewHashRing()
 	balancers := map[string]*ReadBalancer{}
 
+	clientConf := config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15, UnHealthyInterval: 2}
+
 	// setup primary config
-	pool := NewConnPool(1, "localhost:12345", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	pool := NewConnPool(1, "localhost:12345", clientConf) // config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode := NewCacheNode("testPrimary", true, pool)
 
 	ring.AddNode(newNode)
 
-	newBalancer := NewReadBalancer()
+	newBalancer := NewReadBalancer(clientConf)
 	newBalancer.addCacheNode(newNode)
 	balancers["testPrimary"] = newBalancer
 
 	// setup secondary config
-	pool2 := NewConnPool(1, "localhost:12346", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	pool2 := NewConnPool(1, "localhost:12346", clientConf) // config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode2 := NewCacheNode("testSecondary1", true, pool2)
 	readBalancer := balancers["testPrimary"]
 	readBalancer.addCacheNode(newNode2)
 
 	// setup secondary config
-	pool3 := NewConnPool(1, "localhost:12347", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
+	pool3 := NewConnPool(1, "localhost:12347", clientConf) // config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode3 := NewCacheNode("testSecondary2", true, pool3)
 	//readBalancer := balancers["testPrimary"]
 	readBalancer.addCacheNode(newNode3)
@@ -316,7 +324,7 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
 	// add a delay so the blacklisted node is whitelisted again
-	time.Sleep(31 * time.Second)
+	time.Sleep(3 * time.Second)
 	// Test Get, This should try to query the second secondary first and since it is down the primary should queried again
 	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue" {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)

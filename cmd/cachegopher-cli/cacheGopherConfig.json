@@ -1,7 +1,8 @@
 {
 "clientConf": {
 	"connectionTimeout": 300,
-	"keepAliveInterval": 15
+	"keepAliveInterval": 15,
+	"unHealthyInterval": 30
 },
 "common": {
 	"production": false,

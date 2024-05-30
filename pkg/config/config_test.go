@@ -17,7 +17,8 @@ func TestLoadConfigSuccess(t *testing.T) {
 	{
 "clientConf": {
 	"connectionTimeout": 300,
-	"keepAliveInterval": 15
+	"keepAliveInterval": 15,
+	"unHealthyInterval": 30
 },
 	
 		"common": {
@@ -63,6 +64,9 @@ func TestLoadConfigSuccess(t *testing.T) {
 	}
 	if config.ClientConfig.KeepAliveInterval != 15 {
 		t.Errorf("Expected KeepAliveInterval to be 15")
+	}
+	if config.ClientConfig.UnHealthyInterval != 30 {
+		t.Errorf("Expected UnHealthyInterval to be 30")
 	}
 	if config.Common.Production != false {
 		t.Errorf("Expected Production to be false")

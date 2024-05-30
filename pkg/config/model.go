@@ -30,4 +30,5 @@ type LoggingConfig struct {
 type ClientConfig struct {
 	ConnectionTimeout int `json:"connectionTimeout"`
 	KeepAliveInterval int `json:"keepAliveInterval"`
+	UnHealthyInterval int `json:"unHealthyInterval"`
 }

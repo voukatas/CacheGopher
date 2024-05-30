@@ -58,8 +58,10 @@ func TestClient(t *testing.T) {
 	ring := NewHashRing()
 	balancers := map[string]*ReadBalancer{}
 
+	clientConf := config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15}
+
 	ring.AddNode(newNode)
-	newBalancer := NewReadBalancer()
+	newBalancer := NewReadBalancer(clientConf)
 	newBalancer.addCacheNode(newNode)
 	balancers["testNode"] = newBalancer
 

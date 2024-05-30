@@ -58,12 +58,14 @@ type ReadBalancer struct {
 	nodes []*CacheNode
 	index int
 	lock  sync.Mutex
+	cfg   config.ClientConfig
 }
 
-func NewReadBalancer() *ReadBalancer {
+func NewReadBalancer(cfg config.ClientConfig) *ReadBalancer {
 	return &ReadBalancer{
 		nodes: make([]*CacheNode, 0),
 		index: 0,
+		cfg:   cfg,
 	}
 }
 
@@ -275,7 +277,7 @@ func NewClient(enableLogging bool) (*Client, error) {
 			newNode := NewCacheNode(node.ID, true, newPool)
 
 			ring.AddNode(newNode)
-			newBalancer := NewReadBalancer()
+			newBalancer := NewReadBalancer(cfg.ClientConfig)
 			newBalancer.addCacheNode(newNode)
 			balancers[node.ID] = newBalancer
 

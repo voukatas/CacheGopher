@@ -50,7 +50,8 @@ Inside the bin/ modify the json as you like
 {
 "clientConf": {
 	"connectionTimeout": 300,
-	"keepAliveInterval": 15
+	"keepAliveInterval": 15,
+	"unHealthyInterval": 30
 },
 "common": {
 	"production": false,
@@ -214,6 +215,7 @@ FLUSH
 
 ## General guidelines for the configuration
 - The clientConf section contains the values to configure the client and is measured in seconds
+- The unHealthyInterval specifies the time that a cache node is considered down from the first failure. For example, if a node fails to reply now, the client will try again to communicate with the failed node as specified in this value
 - If you have less write operations and more read operations you can set a relative small number to avoid searching for scattered values around the memory. If the opposite is your case (more writes and less read operations) use a larger size to avoid the overhead of deletion and moving around of the elements
 
 # How to build/run as a developer
