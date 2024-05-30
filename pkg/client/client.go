@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/voukatas/CacheGopher/pkg/config"
+	"github.com/voukatas/CacheGopher/pkg/errorutil"
 	"github.com/voukatas/CacheGopher/pkg/logger"
 )
 
@@ -69,20 +71,36 @@ func (rb *ReadBalancer) addCacheNode(node *CacheNode) {
 	rb.nodes = append(rb.nodes, node)
 }
 
-func (rb *ReadBalancer) getNextCacheNode() *CacheNode {
+func (rb *ReadBalancer) getNextCacheNode() (*CacheNode, error) {
 	rb.lock.Lock()
 	defer rb.lock.Unlock()
 
 	total := len(rb.nodes)
-	if total == 1 {
-		// return the primary, hopefully it is not empty
-		return rb.nodes[0]
+	if total == 0 {
+		return nil, fmt.Errorf("no cache nodes exist")
 	}
 
-	node := rb.nodes[rb.index%total]
-	rb.index++
+	for i := 0; i < total; i++ {
 
-	return node
+		node := rb.nodes[rb.index%total]
+		rb.index++
+
+		node.HealthLock.Lock()
+		if !node.Unhealthy || time.Now().After(node.RetryAt) {
+
+			if node.Unhealthy {
+				node.Unhealthy = false
+			}
+
+			node.HealthLock.Unlock()
+			return node, nil
+		}
+
+		node.HealthLock.Unlock()
+
+	}
+
+	return nil, fmt.Errorf("no available cache nodes")
 }
 
 func (pc *PoolConn) isExpired(timeout int) bool {
@@ -357,7 +375,9 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 
 	if poolConn.scanner.Scan() {
 		getLogger().Debug("Data from read: " + poolConn.scanner.Text())
-		if strings.Contains(poolConn.scanner.Text(), "ERROR:") {
+		if poolConn.scanner.Text() == "ERROR: Key not found" {
+			return "", errorutil.ErrKeyNotFound
+		} else if strings.Contains(poolConn.scanner.Text(), "ERROR:") {
 			return "", fmt.Errorf(poolConn.scanner.Text())
 		}
 		return poolConn.scanner.Text(), nil
@@ -396,11 +416,35 @@ func (c *Client) Get(k string) (string, error) {
 	}
 
 	balancer := c.balancers[primaryNode.ID]
-	node := balancer.getNextCacheNode()
-	getLogger().Debug("node selected to send the request: " + node.ID)
-	resp, err := c.sendCommand(node, cmd)
 
-	return resp, err
+	for {
+
+		node, err := balancer.getNextCacheNode()
+		if err != nil {
+			getLogger().Error(err.Error())
+			fmt.Println("----------------------------------" + err.Error())
+			return "", err
+		}
+		getLogger().Debug("node selected to send the request: " + node.ID)
+		//fmt.Println("node selected to send the request: " + node.ID)
+		resp, err := c.sendCommand(node, cmd)
+
+		if err != nil {
+			//fmt.Println("THE ERROR: ", err.Error())
+			switch {
+			case errors.Is(err, errorutil.ErrKeyNotFound):
+				return "", err
+			default:
+				// set unhealthy
+				getLogger().Warn("node: " + node.ID + " set to UnHealthy")
+				//fmt.Println("------------------------------- node: " + node.ID + " set to UnHealthy")
+				node.SetUnhealthy(30 * time.Second)
+				continue
+			}
+		}
+
+		return resp, err
+	}
 
 }
 

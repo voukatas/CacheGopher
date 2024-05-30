@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func startTestServer(t *testing.T, cap int, port int, cacheValues map[string]string) (*net.Listener, error) {
+func startTestServer(t *testing.T, cap int, port int, cacheValues map[string]string) (net.Listener, error) {
 	tlogger := logger.SetupDebugLogger()
 	localCache, err := cache.NewCache("LRU", cap)
 	if err != nil {
@@ -62,5 +62,5 @@ func startTestServer(t *testing.T, cap int, port int, cacheValues map[string]str
 
 	// small delay
 	time.Sleep(time.Second)
-	return &listener, nil
+	return listener, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 )
 
 type CacheNode struct {
@@ -13,6 +14,9 @@ type CacheNode struct {
 	IsPrimary bool
 	Hash      uint32
 	*ConnPool
+	Unhealthy  bool
+	RetryAt    time.Time
+	HealthLock sync.Mutex // Lock for controling the health status and the timestamp of it
 }
 
 func NewCacheNode(id string, isPrimary bool, pool *ConnPool) *CacheNode {
@@ -25,6 +29,14 @@ func NewCacheNode(id string, isPrimary bool, pool *ConnPool) *CacheNode {
 		Hash:      binary.BigEndian.Uint32(hash.Sum(nil)[:4]),
 		ConnPool:  pool,
 	}
+}
+
+func (node *CacheNode) SetUnhealthy(delay time.Duration) {
+	node.HealthLock.Lock()
+	defer node.HealthLock.Unlock()
+
+	node.Unhealthy = true
+	node.RetryAt = time.Now().Add(delay)
 }
 
 type HashRing interface {

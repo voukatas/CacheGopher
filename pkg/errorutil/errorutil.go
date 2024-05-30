@@ -46,3 +46,18 @@ func Wrap(err error, msg string) error {
 	return newError
 	//return fmt.Errorf("%s: %w\nStack Trace:\n%s", msg, err, stackTrace())
 }
+
+// define custom errors section
+
+type KeyNotFoundError struct{}
+
+var ErrKeyNotFound = &KeyNotFoundError{}
+
+func (e *KeyNotFoundError) Error() string {
+	return "ERROR: Key not found"
+}
+
+func (e *KeyNotFoundError) Is(target error) bool {
+	_, ok := target.(*KeyNotFoundError)
+	return ok
+}

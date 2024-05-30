@@ -265,3 +265,4 @@ go test -bench=BenchmarkCacheSet
 - Create Virtual Nodes for better key distribution on the each physical server
 - Add a discovery mechanism, remember to uncomment the thread-safety code in case you have automated additions or removals
 - If a discovery mechanism is introduced and a huge number of Cache nodes are expected to be added and removed dynamically, then measure the current performance of the sorting of the array and if maybe consider a change from an array to a tree (re balance tree like red-black) for faster access
+- A common lib to handle errors and delimiter
