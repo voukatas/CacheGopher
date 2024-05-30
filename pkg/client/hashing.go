@@ -37,6 +37,8 @@ func (node *CacheNode) SetUnhealthy(delay time.Duration) {
 
 	node.Unhealthy = true
 	node.RetryAt = time.Now().Add(delay)
+	// fmt.Println("!!!!!!!!!!!!!!!!!!!! time now: ", time.Now())
+	// fmt.Println("!!!!!!!!!!!!!!!!!!!! node.retry: ", node.RetryAt)
 }
 
 type HashRing interface {

@@ -86,6 +86,7 @@ func (rb *ReadBalancer) getNextCacheNode() (*CacheNode, error) {
 
 		node := rb.nodes[rb.index%total]
 		rb.index++
+		//fmt.Printf("======================= node selected to check if proper:%s unhealty: %v retry: %v current time: %v \n", node.ID, node.Unhealthy, node.RetryAt, time.Now())
 
 		node.HealthLock.Lock()
 		if !node.Unhealthy || time.Now().After(node.RetryAt) {
@@ -424,11 +425,11 @@ func (c *Client) Get(k string) (string, error) {
 		node, err := balancer.getNextCacheNode()
 		if err != nil {
 			getLogger().Error(err.Error())
-			fmt.Println("----------------------------------" + err.Error())
+			//fmt.Println("----------------------------------" + err.Error())
 			return "", err
 		}
 		getLogger().Debug("node selected to send the request: " + node.ID)
-		//fmt.Println("node selected to send the request: " + node.ID)
+		fmt.Println("node selected to send the request: " + node.ID)
 		resp, err := c.sendCommand(node, cmd)
 
 		if err != nil {
@@ -439,8 +440,8 @@ func (c *Client) Get(k string) (string, error) {
 			default:
 				// set unhealthy
 				getLogger().Warn("node: " + node.ID + " set to UnHealthy")
-				//fmt.Println("------------------------------- node: " + node.ID + " set to UnHealthy")
-				node.SetUnhealthy(30 * time.Second)
+				//fmt.Println("------------------------------- node: " + node.ID + " set to UnHealthy for " + strconv.Itoa(balancer.cfg.UnHealthyInterval))
+				node.SetUnhealthy(time.Duration(balancer.cfg.UnHealthyInterval) * time.Second)
 				continue
 			}
 		}

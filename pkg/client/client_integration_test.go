@@ -17,7 +17,7 @@ func TestRealServerInteraction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener).Close()
+	defer (listener).Stop()
 
 	// setup client
 	// pool := NewConnPool(1, "localhost:12345")
@@ -76,7 +76,7 @@ func TestRealServerInteractionConcurrently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener).Close()
+	defer (listener).Stop()
 
 	pool := NewConnPool(5, "localhost:12345", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode := NewCacheNode("testNode", true, pool)
@@ -145,7 +145,7 @@ func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener1).Close()
+	defer (listener1).Stop()
 
 	// start secondary server 1
 	mapSecondary1 := map[string]string{
@@ -155,7 +155,7 @@ func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener2).Close()
+	defer (listener2).Stop()
 
 	// start secondary server 2
 	mapSecondary2 := map[string]string{
@@ -165,7 +165,7 @@ func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener3).Close()
+	defer (listener3).Stop()
 
 	ring := NewHashRing()
 	balancers := map[string]*ReadBalancer{}
@@ -238,7 +238,7 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener1).Close()
+	defer (listener1).Stop()
 
 	// start secondary server 1
 	mapSecondary1 := map[string]string{
@@ -248,7 +248,7 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer (listener2).Close()
+	defer (listener2).Stop()
 
 	//start secondary server 2
 	mapSecondary2 := map[string]string{
@@ -306,7 +306,7 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
 
-	(listener3).Close()
+	(listener3).Stop()
 	// Test Get, This should query the primary server since the secondary went down and the round robin will start again from the first server
 	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue" {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
@@ -323,10 +323,13 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue1" {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
+	(listener3).Resume(t)
+	defer (listener3).Stop()
 	// add a delay so the blacklisted node is whitelisted again
 	time.Sleep(3 * time.Second)
-	// Test Get, This should try to query the second secondary first and since it is down the primary should queried again
-	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue" {
+	//fmt.Println("@@@@@@@@@@@@@@@@@@@@@@Current time in test: ", time.Now())
+	// Test Get, This should try to query the second secondary since it is back online
+	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue2" {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
 
