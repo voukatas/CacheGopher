@@ -276,7 +276,8 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				s.replicator.AddWriteEvent(replication.WriteEvent{Key: cmd[1], Cmd: cmd[0]})
 			} else {
 
-				fmt.Fprintf(conn, "ERROR: No such key\n")
+				//fmt.Fprintf(conn, "ERROR: No such key\n")
+				fmt.Fprintf(conn, "ERROR: Key not found\n")
 			}
 
 			// check if we recover and do your thing

@@ -433,7 +433,7 @@ func (c *Client) Get(k string) (string, error) {
 		resp, err := c.sendCommand(node, cmd)
 
 		if err != nil {
-			//fmt.Println("THE ERROR: ", err.Error())
+			//fmt.Println("---------------------THE ERROR: ", err.Error())
 			switch {
 			case errors.Is(err, errorutil.ErrKeyNotFound):
 				return "", err
