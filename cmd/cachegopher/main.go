@@ -30,15 +30,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// for _, server := range cfg.Servers {
-	// 	fmt.Printf("Server ID: %s, Address: %s, Role: %s\n", server.ID, server.Address, server.Role)
-	// 	if server.Role == "primary" {
-	// 		fmt.Println("Secondaries:", server.Secondaries)
-	// 	} else {
-	// 		fmt.Println("Primary:", server.Primary)
-	// 	}
-	// }
-
 	var myConfig config.ServerConfig
 	for _, server := range cfg.Servers {
 		if server.ID == *serverId {
@@ -151,6 +142,6 @@ func main() {
 
 	<-done
 	slogger.Info("Server stopped")
-	// cleanup() and listener.Close() are called
+	// cleanup() and listener.Close() will be called
 
 }

@@ -58,8 +58,6 @@ func (s *Server) SendCurrentState(conn net.Conn) {
 func (s *Server) StopWriteOpsAndEnableQueuedWrites() {
 	s.cache.Lock()
 	defer s.cache.Unlock()
-	// s.writeLock.Lock()
-	// defer s.writeLock.Unlock()
 	s.recoveryLock.Lock()
 	defer s.recoveryLock.Unlock()
 	s.logger.Debug("isRecovering = true")
@@ -245,10 +243,7 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			// check if we recover and do your thing
 			s.IsRecovering(cmd)
 
-			//fmt.Println("Keys SET : ", s.cache.Keys())
-
 		case "GET":
-			//fmt.Println("Keys GET : ", s.cache.Keys())
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: GET <key>\n")
 				s.logger.Debug("ERROR: Usage: GET <key>")
@@ -264,7 +259,6 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			s.logger.Debug("GET" + " value:" + v)
 
 		case "DELETE":
-			//fmt.Println("Keys DELETE : ", s.cache.Keys())
 			if len(cmd) != 2 {
 				fmt.Fprintf(conn, "ERROR: Usage: DELETE <key>\n")
 				continue
@@ -276,11 +270,9 @@ func (s *Server) HandleConnection(conn net.Conn) {
 				s.replicator.AddWriteEvent(replication.WriteEvent{Key: cmd[1], Cmd: cmd[0]})
 			} else {
 
-				//fmt.Fprintf(conn, "ERROR: No such key\n")
 				fmt.Fprintf(conn, "ERROR: Key not found\n")
 			}
 
-			// check if we recover and do your thing
 			s.IsRecovering(cmd)
 
 		case "FLUSH":
@@ -332,16 +324,8 @@ func (s *Server) HandleConnection(conn net.Conn) {
 			s.SendCurrentState(conn)
 
 			s.logger.Debug("state send")
-			//time.Sleep(10 * 1000 * time.Millisecond)
 
-			// lock in write mode to send all the remaining keys if it is the primary server
-			// if s.replicator.IsPrimary() {
-			// 	s.logger.Debug("IsPrimary true")
-			// } else {
-			// 	s.logger.Debug("Not a primary node")
-			// }
 			if s.isPrimary {
-				//s.logger.Debug("IsPrimary true")
 				s.SendQueuedWrites(conn)
 			}
 

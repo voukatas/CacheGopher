@@ -19,13 +19,6 @@ func TestRealServerInteraction(t *testing.T) {
 	}
 	defer (listener).Stop()
 
-	// setup client
-	// pool := NewConnPool(1, "localhost:12345")
-	// client, err := NewClient(pool, true)
-	// if err != nil {
-	// 	t.Fatalf("Failed to create client: %v", err)
-	// }
-
 	pool := NewConnPool(1, "localhost:12345", config.ClientConfig{ConnectionTimeout: 300, KeepAliveInterval: 15})
 	newNode := NewCacheNode("testNode", true, pool)
 
@@ -141,10 +134,6 @@ func TestRealServerInteractionConcurrently(t *testing.T) {
 // A round robin selection is assumed so the next server is expected to be queried in each request
 func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
 
-	// setup primary server
-	// mapPrimary := map[string]string{
-	// 	"hello": "world",
-	// }
 	listener1, err := startTestServer(t, 10, 12345, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -224,20 +213,11 @@ func TestRoundRobinInMultipleRealServersInteraction(t *testing.T) {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)
 	}
 
-	// delete this
-	// if resp, err := client.Get("testkey"); err != nil {
-	// 	t.Errorf("Get failed: resp=%s, err=%v", resp, err)
-	// }
-
 }
 
 // A round robin selection is assumed so the next server is expected to be queried in each request
 func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T) {
 
-	// setup primary server
-	// mapPrimary := map[string]string{
-	// 	"hello": "world",
-	// }
 	listener1, err := startTestServer(t, 10, 12345, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -331,7 +311,6 @@ func TestRoundRobinInMultipleRealServersInteractionWithBlacklisting(t *testing.T
 	defer (listener3).Stop()
 	// add a delay so the blacklisted node is whitelisted again
 	time.Sleep(3 * time.Second)
-	//fmt.Println("@@@@@@@@@@@@@@@@@@@@@@Current time in test: ", time.Now())
 	// Test Get, This should try to query the second secondary since it is back online
 	if resp, err := client.Get("testkey"); err != nil || resp != "testvalue2" {
 		t.Errorf("Get failed: resp=%s, err=%v", resp, err)

@@ -77,9 +77,6 @@ func TestHandleConnection(t *testing.T) {
 		close(done)
 	}()
 
-	//fmt.Println("before write")
-	// A small sleep to ensure the server started
-	//time.Sleep(1)
 	clientConn.Write([]byte("GET key\n"))
 	scanner := bufio.NewScanner(clientConn)
 	scanner.Scan()
@@ -93,12 +90,10 @@ func TestHandleConnection(t *testing.T) {
 		t.Error("Expected on SET to receive 'OK'")
 
 	}
-	//fmt.Println("after write 2:", scanner.Text())
 	clientConn.Close() // signal EOF to close the connection on HandleConnection
 
 	// this channel is needed to avoid race conditions
 	<-done
-	//fmt.Println("after done")
 
 	if !mockCache.GetCalled {
 		t.Error("Expected Get to be called")

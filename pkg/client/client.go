@@ -86,7 +86,6 @@ func (rb *ReadBalancer) getNextCacheNode() (*CacheNode, error) {
 
 		node := rb.nodes[rb.index%total]
 		rb.index++
-		//fmt.Printf("======================= node selected to check if proper:%s unhealty: %v retry: %v current time: %v \n", node.ID, node.Unhealthy, node.RetryAt, time.Now())
 
 		node.HealthLock.Lock()
 		if !node.Unhealthy || time.Now().After(node.RetryAt) {
@@ -112,34 +111,6 @@ func (pc *PoolConn) isExpired(timeout int) bool {
 	return time.Since(pc.createdAt) > maxValidTime
 }
 
-func (pc *PoolConn) isValid() bool {
-	// can be set from config if we need to use this fc
-
-	_, err := pc.conn.Write([]byte("PING\n"))
-	if err != nil {
-		getLogger().Debug("isValid is false 1")
-		return false
-	}
-
-	if ok := pc.scanner.Scan(); !ok {
-		if err := pc.scanner.Err(); err != nil {
-			getLogger().Debug("Scanner error on reading:" + err.Error())
-			return false
-		}
-		getLogger().Debug("isValid is false 2: No data read")
-		return false
-	}
-
-	if pc.scanner.Text() != "PONG" {
-		getLogger().Debug("isValid is false 3: Unexpected response" + pc.scanner.Text())
-		return false
-	}
-
-	getLogger().Debug("isValid is true")
-	return true
-
-}
-
 func (pc *PoolConn) Close() {
 	pc.conn.Close()
 }
@@ -149,7 +120,6 @@ func NewConnPool(size int, address string, cfg config.ClientConfig) *ConnPool {
 		pool:    make(chan *PoolConn, size),
 		address: address,
 		cfg:     cfg,
-		// size:    size,
 	}
 }
 
@@ -159,7 +129,7 @@ func (cp *ConnPool) Get() (*PoolConn, error) {
 	for {
 		select {
 		case poolConn := <-cp.pool:
-			if poolConn.isExpired(cp.cfg.ConnectionTimeout) { // || !poolConn.isValid() {
+			if poolConn.isExpired(cp.cfg.ConnectionTimeout) {
 				getLogger().Debug("isExpired or is invalid")
 				poolConn.Close()
 				continue
@@ -226,12 +196,6 @@ func (cp *ConnPool) dialWithBackOff() (*PoolConn, error) {
 }
 
 func (cp *ConnPool) Return(poolConn *PoolConn) error {
-	// getLogger().Debug("Return called")
-	// if _, err := conn.Write([]byte("PING")); err != nil {
-	// 	conn.Close()
-	// 	return err
-	// }
-
 	select {
 	case cp.pool <- poolConn:
 	// return the connection to the pool
@@ -244,26 +208,13 @@ func (cp *ConnPool) Return(poolConn *PoolConn) error {
 }
 
 type Client struct {
-	//pool *ConnPool
 	ring      HashRing
 	balancers map[string]*ReadBalancer
-	//cfg       config.ClientConfig
-
-	//logger logger.Logger
-	// conn    net.Conn
-	// scanner *bufio.Scanner
-	// lock    sync.RWMutex
 }
 
 func NewClient(enableLogging bool) (*Client, error) {
-	// conn, err := net.Dial("tcp", address)
-	//
-	// if err != nil {
-	// 	return nil, err
-	// }
 	cfg, err := config.LoadConfig("cacheGopherConfig.json")
 	if err != nil {
-		fmt.Println("Failed to read configuration: " + err.Error())
 		return nil, fmt.Errorf("Failed to read configuration: " + err.Error())
 	}
 
@@ -302,18 +253,8 @@ func NewClient(enableLogging bool) (*Client, error) {
 	return &Client{
 		ring:      ring,
 		balancers: balancers,
-		//cfg:       cfg.ClientConfig,
-		//pool: pool,
-		//logger: libLogger,
-		// conn:    conn,
-		// scanner: bufio.NewScanner(conn),
-		// lock:    sync.RWMutex{},
 	}, nil
 }
-
-// func (c *Client) Close() {
-// 	c.conn.Close()
-// }
 
 func validateCommand(cmdBytes []byte) error {
 	const maxTokenSize = 64 * 1024
@@ -373,7 +314,6 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 	}
 	defer node.ConnPool.Return(poolConn)
 
-	//poolConn.scanner = bufio.NewScanner(poolConn.conn)
 	getLogger().Debug("sendCommand: Waiting for response")
 
 	if poolConn.scanner.Scan() {
@@ -394,8 +334,6 @@ func (c *Client) sendCommand(node *CacheNode, cmd string) (string, error) {
 }
 
 func (c *Client) Set(k, v string) (string, error) {
-	// c.lock.Lock()
-	// defer c.lock.Unlock()
 	getLogger().Debug("SET " + k + " " + v)
 	cmd := fmt.Sprintf("SET %s %s", k, v)
 	primaryNode, err := c.ring.GetNode(k)
@@ -409,8 +347,6 @@ func (c *Client) Set(k, v string) (string, error) {
 }
 
 func (c *Client) Get(k string) (string, error) {
-	// c.lock.RLock()
-	// defer c.lock.RUnlock()
 	getLogger().Debug("GET " + k)
 	cmd := fmt.Sprintf("GET %s", k)
 	primaryNode, err := c.ring.GetNode(k)
@@ -425,22 +361,18 @@ func (c *Client) Get(k string) (string, error) {
 		node, err := balancer.getNextCacheNode()
 		if err != nil {
 			getLogger().Error(err.Error())
-			//fmt.Println("----------------------------------" + err.Error())
 			return "", err
 		}
 		getLogger().Debug("node selected to send the request: " + node.ID)
-		fmt.Println("node selected to send the request: " + node.ID)
 		resp, err := c.sendCommand(node, cmd)
 
 		if err != nil {
-			//fmt.Println("---------------------THE ERROR: ", err.Error())
 			switch {
 			case errors.Is(err, errorutil.ErrKeyNotFound):
 				return "", err
 			default:
 				// set unhealthy
 				getLogger().Warn("node: " + node.ID + " set to UnHealthy")
-				//fmt.Println("------------------------------- node: " + node.ID + " set to UnHealthy for " + strconv.Itoa(balancer.cfg.UnHealthyInterval))
 				node.SetUnhealthy(time.Duration(balancer.cfg.UnHealthyInterval) * time.Second)
 				continue
 			}

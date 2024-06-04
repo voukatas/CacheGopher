@@ -37,8 +37,6 @@ func (node *CacheNode) SetUnhealthy(delay time.Duration) {
 
 	node.Unhealthy = true
 	node.RetryAt = time.Now().Add(delay)
-	// fmt.Println("!!!!!!!!!!!!!!!!!!!! time now: ", time.Now())
-	// fmt.Println("!!!!!!!!!!!!!!!!!!!! node.retry: ", node.RetryAt)
 }
 
 type HashRing interface {
@@ -61,11 +59,6 @@ func NewHashRing() HashRing {
 
 // maybe i need to implement also virtual nodes to better distribute the keys
 func (s *SimpleHashRing) AddNode(node *CacheNode) {
-	// s.lock.Lock()
-	// defer s.lock.Unlock()
-	//fmt.Println("node hash: ", node.Hash)
-	//getLogger().Debug("node hash: " + fmt.Sprintf("%v", node.Hash))
-
 	s.nodes = append(s.nodes, node)
 	sort.Slice(s.nodes, func(i, j int) bool {
 		return s.nodes[i].Hash < s.nodes[j].Hash
@@ -75,9 +68,6 @@ func (s *SimpleHashRing) AddNode(node *CacheNode) {
 // Reserved for future use
 // If this method is used, verify that the GetNode has the locks code
 func (s *SimpleHashRing) RemoveNode(node *CacheNode) {
-	// s.lock.Lock()
-	// defer s.lock.Unlock()
-
 	for i, n := range s.nodes {
 		if node.ID == n.ID {
 			s.nodes = append(s.nodes[:i], s.nodes[i+1:]...)
@@ -90,8 +80,6 @@ func (s *SimpleHashRing) RemoveNode(node *CacheNode) {
 // In case a discovery functionality is added, the mutexes should be used
 // Take the risky road and avoid using the mutexes for now since we only read, for now...
 func (s *SimpleHashRing) GetNode(key string) (*CacheNode, error) {
-	// s.lock.RLock()
-	// defer s.lock.RUnlock()
 	if len(s.nodes) == 0 {
 		return nil, fmt.Errorf("ring is empty")
 	}
@@ -120,7 +108,6 @@ func (s *SimpleHashRing) GetNode(key string) (*CacheNode, error) {
 	})
 
 	if idx < len(s.nodes) {
-		//fmt.Println("node selected to send the request: ", s.nodes[idx])
 		return s.nodes[idx], nil
 	}
 

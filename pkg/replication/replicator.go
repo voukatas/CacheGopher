@@ -70,10 +70,8 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 
 			conn, err := establishConnection(server.Address)
 			if err != nil {
-				//logger.Error("failed to establish connection: " + err.Error())
 				logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				continue
-				// return nil, err
 			}
 			connMap[server.ID] = conn
 		}
@@ -82,7 +80,6 @@ func NewReplicator(currentServerId string, cfg *config.Configuration, logger log
 	// i should refactor this for the case that is not primary, no need to keep the references and waste resources
 
 	rep := &Replicator{
-		//secondaries: secondaries,
 		connMap:     connMap,
 		secondaries: secondariesConfig,
 		writeCh:     writeCh,
@@ -151,7 +148,6 @@ func (r *Replicator) checkResponse(conn *ReplConn) error {
 func (rc *ReplConn) checkConnResp() error {
 	if rc.Scanner.Scan() {
 
-		//fmt.Println("checkConnResp received: ", rc.Scanner.Text())
 		if rc.Scanner.Text() != "OK" {
 			return fmt.Errorf("received: " + rc.Scanner.Text() + " instead of OK")
 		}
@@ -180,9 +176,7 @@ func sendCommand(replConn *ReplConn, we WriteEvent) error {
 	case "DELETE":
 		cmd = fmt.Sprintf("%s %s\n", we.Cmd, we.Key)
 	}
-	//cmd = fmt.Sprintf("%s %s %s\n", we.Cmd, we.Key, we.Value)
 	_, err := replConn.Conn.Write([]byte(cmd))
-	//fmt.Println("inside send command : ", err.Error())
 	return err
 }
 
@@ -212,12 +206,7 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 
 			replConn = conn
 
-			// r.logger.Error("failed to replicate, no connection to server: " + server.ID)
-			// continue
 		}
-
-		// cmd := fmt.Sprintf("%s %s %s\n", we.cmd, we.key, we.value)
-		// _, err := replConn.conn.Write([]byte(cmd))
 
 		// There is a case where the connection drop is not detected immediatelly so no error is returned, we will handle it at the end
 		err := sendCommand(replConn, we)
@@ -228,31 +217,21 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 
 			newConn, err := reEstablishConnection(server.Address)
 			if err != nil {
-				//r.logger.Error("failed to establish connection" + err.Error())
 				r.logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				continue
 			}
 
 			r.connMap[server.ID] = newConn
 
-			//_, err = newConn.conn.Write([]byte(cmd))
 			err = sendCommand(newConn, we)
 
 			if err != nil {
 				newConn.Conn.Close()
-				//r.logger.Error(err.Error())
 				r.logger.Error(errorutil.Wrap(err, "").Error())
 				continue
 			}
 
 			currentConn = newConn
-			// cehck the response
-			// err = newConn.checkConnResp()
-			// if err != nil {
-			// 	r.logger.Error(err.Error())
-			// 	return
-			// }
-			// r.logger.Info("Task replicated")
 
 		}
 
@@ -264,7 +243,6 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 
 			conn, err := establishConnection(server.Address)
 			if err != nil {
-				//r.logger.Error("failed to establish connection" + err.Error())
 				r.logger.Error(errorutil.Wrap(err, "failed to establish connection").Error())
 				return
 			}
@@ -277,16 +255,6 @@ func (r *Replicator) replicateTask(we WriteEvent) {
 			}
 
 		}
-
-		// else {
-		// 	err = replConn.checkConnResp()
-		// 	if err != nil {
-		// 		r.logger.Error(err.Error())
-		// 		return
-		// 	}
-		// 	r.logger.Info("Task replicated")
-		//
-		// }
 
 	}
 

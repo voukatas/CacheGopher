@@ -70,11 +70,6 @@ func TestClient(t *testing.T) {
 		balancers: balancers,
 	}
 
-	//client, err := NewClient(true)
-	// if err != nil {
-	// 	t.Fatalf("Failed to create client: %v", err)
-	// }
-
 	// Test Ping
 	if resp, err := client.Ping(newNode); err != nil || resp != "PONG" {
 		t.Errorf("Ping failed: resp=%s, err=%v", resp, err)

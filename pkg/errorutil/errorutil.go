@@ -25,7 +25,6 @@ func (s *StackError) Error() string {
 }
 
 func (s *StackError) FullError() string {
-	//log.Printf("%s\nStackTrace:\n%s", s.err.Error(), s.stackTrace)
 	return fmt.Sprintf("%s\nStackTrace:\n%s", s.err.Error(), s.stackTrace)
 }
 
@@ -44,7 +43,6 @@ func Wrap(err error, msg string) error {
 	stack := stackTrace()
 	newError := NewStackError(werr, string(stack))
 	return newError
-	//return fmt.Errorf("%s: %w\nStack Trace:\n%s", msg, err, stackTrace())
 }
 
 // define custom errors section

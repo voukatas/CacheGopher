@@ -29,14 +29,12 @@ func TestServerIntegration(t *testing.T) {
 	}
 	defer listener.Close()
 
-	//ready := make(chan struct{})
 	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
 			t.Logf("Failed to accept connection: %v", err)
 			return
 		}
-		//close(ready)
 		myServer.HandleConnection(conn)
 	}()
 
@@ -45,8 +43,6 @@ func TestServerIntegration(t *testing.T) {
 		t.Fatalf("Failed to dial server: %v", err)
 	}
 	defer clientConn.Close()
-
-	//<-ready
 
 	fmt.Fprintf(clientConn, "SET myKey myValue\n")
 
@@ -165,16 +161,13 @@ func TestKeyReplicationAndRecoveryForTheSecondary(t *testing.T) {
 	if !exists {
 		t.Error("Primary should have the key 'myKey2'")
 	}
-	//fmt.Println("exists? ", exists, v)
 
 	// verify that the key-value was replicated on the secondary
 	_, exists = secondaryServer.cache.Get("myKey")
-	//fmt.Println("exists? ", exists)
 	if !exists {
 		t.Error("Secondary should have the key 'myKey'")
 	}
 	_, exists = secondaryServer.cache.Get("myKey2")
-	//fmt.Println("exists? ", exists)
 	if !exists {
 		t.Error("Secondary should have the key 'myKey2'")
 	}
@@ -216,26 +209,6 @@ func TestKeyReplicationAndRecoveryForTheSecondary(t *testing.T) {
 		t.Error("Secondary should not have the key 'myKey2'")
 	}
 
-	// test recovery of the primary
-	// fmt.Println("Testing primary")
-	//
-	// _ = primaryServer.cache.Delete("myKey")
-	// _, exists = primaryServer.cache.Get("myKey")
-	// fmt.Println("exists? ", exists)
-	// if exists {
-	// 	t.Error("Primary should not have the key 'myKey'")
-	// }
-	//
-	// primaryServer.HandleRecovery(primaryConfig)
-	// time.Sleep(1 * time.Second)
-	//
-	// _, exists = primaryServer.cache.Get("myKey")
-	// fmt.Println("exists? ", exists)
-	// if !exists {
-	// 	t.Error("Primary should have the key 'myKey'")
-	// }
-
-	// close the channel and the servers
 	close(done)
 }
 
@@ -324,11 +297,9 @@ func TestKeyReplicationAndRecoveryForThePrimary(t *testing.T) {
 
 	// verify that the key-value was written on primary
 	_, exists := primaryServer.cache.Get("myKey")
-	//fmt.Println("exists? ", exists, v)
 
 	// verify that the key-value was replicated on the secondary
 	_, exists = secondaryServer.cache.Get("myKey")
-	//fmt.Println("exists? ", exists)
 	if !exists {
 		t.Error("Secondary should have the key 'myKey'")
 	}
